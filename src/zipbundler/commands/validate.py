@@ -13,7 +13,7 @@ from apathetic_utils import load_jsonc, load_toml
 from zipbundler.logs import getAppLogger
 
 
-def _find_config(config_path: str | None, cwd: Path) -> Path | None:
+def find_config(config_path: str | None, cwd: Path) -> Path | None:
     """Find configuration file.
 
     Search order:
@@ -87,7 +87,7 @@ def _load_toml_config(config_path: Path) -> dict[str, Any]:
         raise ValueError(msg) from e
 
 
-def _load_config(config_path: Path) -> dict[str, Any]:
+def load_config(config_path: Path) -> dict[str, Any]:
     """Load configuration from file."""
     if config_path.suffix == ".jsonc" or config_path.name == ".zipbundler.jsonc":
         return _load_jsonc_config(config_path)
@@ -284,7 +284,7 @@ def _validate_options_field(
             warnings.append(msg)
 
 
-def _validate_config_structure(
+def validate_config_structure(
     config: dict[str, Any],
     cwd: Path,
     *,
@@ -328,7 +328,7 @@ def handle_validate_command(args: argparse.Namespace) -> int:
     logger = getAppLogger()
 
     cwd = Path.cwd().resolve()
-    config_path = _find_config(getattr(args, "config", None), cwd)
+    config_path = find_config(getattr(args, "config", None), cwd)
 
     if not config_path:
         msg = (
@@ -340,10 +340,10 @@ def handle_validate_command(args: argparse.Namespace) -> int:
 
     try:
         logger.info("Validating configuration file: %s", config_path)
-        config = _load_config(config_path)
+        config = load_config(config_path)
 
         strict = getattr(args, "strict", False)
-        is_valid, errors, warnings = _validate_config_structure(
+        is_valid, errors, warnings = validate_config_structure(
             config, cwd, strict=strict
         )
 

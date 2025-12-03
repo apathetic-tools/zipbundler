@@ -2,6 +2,7 @@
 
 """Command handlers for zipbundler CLI subcommands."""
 
+from .build import handle_build_command
 from .info import handle_info_command
 from .init import handle_init_command
 from .list import handle_list_command
@@ -10,6 +11,7 @@ from .watch import handle_watch_command
 
 
 __all__ = [
+    "handle_build_command",
     "handle_info_command",
     "handle_init_command",
     "handle_list_command",

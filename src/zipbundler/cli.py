@@ -6,6 +6,7 @@ from apathetic_utils import detect_runtime_mode
 
 from .actions import get_metadata
 from .commands import (
+    handle_build_command,
     handle_info_command,
     handle_init_command,
     handle_list_command,
@@ -37,7 +38,7 @@ def _handle_early_exits(args: argparse.Namespace) -> int | None:
     return None
 
 
-def _setup_parser() -> argparse.ArgumentParser:
+def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     """Define and return the CLI argument parser."""
     parser = argparse.ArgumentParser(
         description="Bundle your packages into a runnable, importable zip"
@@ -92,6 +93,104 @@ def _setup_parser() -> argparse.ArgumentParser:
         help="Verbose output (same as --log-level debug).",
     )
     log_level_init.add_argument(
+        "--log-level",
+        choices=LEVEL_ORDER,
+        default=None,
+        dest="log_level",
+        help="Set log verbosity level.",
+    )
+
+    # Build command
+    build_parser = subparsers.add_parser(
+        "build",
+        help="Build zip from current directory or config",
+    )
+    build_parser.add_argument(
+        "-c",
+        "--config",
+        help=(
+            "Path to configuration file (default: .zipbundler.jsonc or pyproject.toml)"
+        ),
+    )
+    build_parser.add_argument(
+        "-o",
+        "--output",
+        help="Output file path (overrides config)",
+    )
+    build_parser.add_argument(
+        "-m",
+        "--main",
+        dest="entry_point",
+        help="Entry point (module:function or module, overrides config)",
+    )
+    build_parser.add_argument(
+        "-p",
+        "--python",
+        dest="shebang",
+        help="Shebang line (overrides config)",
+    )
+    build_parser.add_argument(
+        "--compress",
+        action="store_true",
+        help="Compress the zip file (overrides config)",
+    )
+    build_parser.add_argument(
+        "--no-compress",
+        action="store_false",
+        dest="compress",
+        help="Do not compress the zip file (overrides config)",
+    )
+    build_parser.add_argument(
+        "--exclude",
+        nargs="+",
+        help="Exclude patterns (overrides config)",
+    )
+    build_parser.add_argument(
+        "--main-guard",
+        action="store_true",
+        default=None,
+        dest="main_guard",
+        help=(
+            "Wrap entry point in 'if __name__ == \"__main__\":' guard "
+            "(overrides config)"
+        ),
+    )
+    build_parser.add_argument(
+        "--no-main-guard",
+        action="store_false",
+        dest="main_guard",
+        help="Do not wrap entry point in main guard (overrides config)",
+    )
+    build_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview what would be bundled without creating zip",
+    )
+    build_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Fail on config validation warnings",
+    )
+
+    # Add log level options to build parser
+    log_level_build = build_parser.add_mutually_exclusive_group()
+    log_level_build.add_argument(
+        "-q",
+        "--quiet",
+        action="store_const",
+        const="warning",
+        dest="log_level",
+        help="Suppress non-critical output (same as --log-level warning).",
+    )
+    log_level_build.add_argument(
+        "-v",
+        "--verbose",
+        action="store_const",
+        const="debug",
+        dest="log_level",
+        help="Verbose output (same as --log-level debug).",
+    )
+    log_level_build.add_argument(
         "--log-level",
         choices=LEVEL_ORDER,
         default=None,
@@ -325,6 +424,8 @@ def main(args: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
         return early_exit_code
 
     # --- Handle subcommands ---
+    if parsed_args.command == "build":
+        return handle_build_command(parsed_args)
     if parsed_args.command == "init":
         return handle_init_command(parsed_args)
     if parsed_args.command == "list":

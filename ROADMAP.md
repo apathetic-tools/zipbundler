@@ -34,7 +34,6 @@ Some of these we just want to consider, and may not want to implement.
 
 ## 🧰 CLI Commands
 
-- `zipbundler build` - Build zip from current directory or config
 - **zipapp-style CLI** - Support `python -m zipapp` compatible interface:
   - `zipbundler SOURCE -o OUTPUT` - Specify source and output
   - `-p, --python SHEBANG` - Set shebang line (e.g., `"/usr/bin/env python3"`)
