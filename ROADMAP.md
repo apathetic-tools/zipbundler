@@ -14,7 +14,6 @@ Some of these we just want to consider, and may not want to implement.
 - **zipapp-Compatible Zip Creation**: Create `.pyz` files compatible with Python's `zipapp` module
 - **Flat Structure**: Preserve original package paths without transformations
 - **Import Support**: Ensure zip files are importable via `zipimport` and `importlib`
-- **Entry Point Support**: Allow specifying entry points for executable zips
 - **zipapp-style CLI**: Support `python -m zipapp` compatible command-line interface with full feature parity:
   - `-o, --output`: Output file path
   - `-p, --python`: Shebang line (interpreter path)
