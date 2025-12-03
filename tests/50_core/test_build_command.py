@@ -341,3 +341,97 @@ def test_cli_build_command_custom_config_path(tmp_path: Path) -> None:
         assert output_file.exists()
     finally:
         os.chdir(original_cwd)
+
+
+def test_cli_build_command_no_shebang_flag(tmp_path: Path) -> None:
+    """Test build command with --no-shebang flag."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create a package structure
+        src_dir = tmp_path / "src" / "mypackage"
+        src_dir.mkdir(parents=True)
+        (src_dir / "__init__.py").write_text("")
+        (src_dir / "module.py").write_text("def func():\n    pass\n")
+
+        # Create config file with shebang enabled
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/mypackage/**/*.py"],
+  "output": {
+    "path": "dist/bundle.zip"
+  },
+  "options": {
+    "shebang": "/usr/bin/env python3"
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["build", "--no-shebang"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify zip file was created
+        output_file = tmp_path / "dist" / "bundle.zip"
+        assert output_file.exists()
+
+        # Verify no shebang was prepended - file should start with zip magic bytes
+        content = output_file.read_bytes()
+        assert content.startswith(b"PK")
+        assert not content.startswith(b"#!/")
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_build_command_config_shebang_false(tmp_path: Path) -> None:
+    """Test build command with shebang: false in config."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create a package structure
+        src_dir = tmp_path / "src" / "mypackage"
+        src_dir.mkdir(parents=True)
+        (src_dir / "__init__.py").write_text("")
+        (src_dir / "module.py").write_text("def func():\n    pass\n")
+
+        # Create config file with shebang disabled
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/mypackage/**/*.py"],
+  "output": {
+    "path": "dist/bundle.zip"
+  },
+  "options": {
+    "shebang": false
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["build"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify zip file was created
+        output_file = tmp_path / "dist" / "bundle.zip"
+        assert output_file.exists()
+
+        # Verify no shebang was prepended - file should start with zip magic bytes
+        content = output_file.read_bytes()
+        assert content.startswith(b"PK")
+        assert not content.startswith(b"#!/")
+    finally:
+        os.chdir(original_cwd)

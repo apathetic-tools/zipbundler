@@ -256,7 +256,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
 
         # Extract options
         options: dict[str, Any] | None = config.get("options")
-        shebang = "#!/usr/bin/env python3"
+        shebang: str | None = "#!/usr/bin/env python3"
         compress = False
         compression_level: int | None = None
         main_guard = True
@@ -275,7 +275,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                     pass
                 elif not shebang_val:
                     # If shebang is False, don't add shebang
-                    shebang = ""
+                    shebang = None
 
             # Compression
             compression_val = options.get("compression")
@@ -305,11 +305,15 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             output = Path(args.output).resolve()
         if hasattr(args, "entry_point") and args.entry_point:
             entry_point_code = _extract_entry_point_code(args.entry_point)
-        if hasattr(args, "shebang") and args.shebang:
-            if args.shebang.startswith("#!"):
-                shebang = args.shebang
-            else:
-                shebang = f"#!{args.shebang}"
+        if hasattr(args, "shebang"):
+            # Handle --no-shebang (False) or --python/-p (string)
+            if args.shebang is False:
+                shebang = None
+            elif args.shebang:
+                if args.shebang.startswith("#!"):
+                    shebang = args.shebang
+                else:
+                    shebang = f"#!{args.shebang}"
         if hasattr(args, "compress") and args.compress is not None:
             compress = args.compress
         if hasattr(args, "exclude") and args.exclude:

@@ -77,7 +77,7 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0915
     output: Path,
     packages: list[Path],
     entry_point: str | None = None,
-    shebang: str = "#!/usr/bin/env python3",
+    shebang: str | None = "#!/usr/bin/env python3",
     *,
     compress: bool = False,
     compression_level: int | None = None,
@@ -93,7 +93,8 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0915
         packages: List of package directories to include
         entry_point: Entry point code to write to __main__.py.
             If None, no __main__.py is created.
-        shebang: Shebang line to prepend to the zip file
+        shebang: Shebang line to prepend to the zip file.
+            If None or empty string, no shebang is added.
         compress: Whether to compress the zip file using deflate method.
             Defaults to False (no compression) to match zipapp behavior.
         compression_level: Compression level for deflate method (0-9).
@@ -171,7 +172,10 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0915
             summary_parts.append(f"Compression: deflate (level {compression_level})")
         else:
             summary_parts.append("Compression: stored")
-        summary_parts.append(f"Shebang: {shebang}")
+        if shebang:
+            summary_parts.append(f"Shebang: {shebang}")
+        else:
+            summary_parts.append("Shebang: none")
         logger.info("🧪 (dry-run) Would create zipapp: %s", " • ".join(summary_parts))
         return
 
@@ -214,9 +218,10 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0915
         for file_path, arcname in files_to_include:
             zf.write(file_path, arcname)
 
-    # Prepend shebang
-    data = output.read_bytes()
-    output.write_bytes(shebang.encode() + b"\n" + data)
+    # Prepend shebang if provided
+    if shebang:
+        data = output.read_bytes()
+        output.write_bytes(shebang.encode() + b"\n" + data)
 
     # Make executable
     output.chmod(output.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)

@@ -148,6 +148,52 @@ def test_build_zipapp_custom_shebang(tmp_path: Path) -> None:
     assert content.startswith(custom_shebang.encode() + b"\n")
 
 
+def test_build_zipapp_no_shebang(tmp_path: Path) -> None:
+    """Test building a zipapp with shebang disabled (None)."""
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+
+    output = tmp_path / "app.pyz"
+
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=None,
+        shebang=None,
+    )
+
+    # Verify no shebang was prepended - file should start with zip magic bytes
+    content = output.read_bytes()
+    # ZIP files start with "PK" (0x504B)
+    assert content.startswith(b"PK")
+    # Verify it doesn't start with shebang
+    assert not content.startswith(b"#!/")
+
+
+def test_build_zipapp_empty_shebang(tmp_path: Path) -> None:
+    """Test building a zipapp with empty string shebang (treated as None)."""
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+
+    output = tmp_path / "app.pyz"
+
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=None,
+        shebang="",
+    )
+
+    # Verify no shebang was prepended - file should start with zip magic bytes
+    content = output.read_bytes()
+    # ZIP files start with "PK" (0x504B)
+    assert content.startswith(b"PK")
+    # Verify it doesn't start with shebang
+    assert not content.startswith(b"#!/")
+
+
 def test_build_zipapp_empty_packages_raises_error(tmp_path: Path) -> None:
     """Test that building with empty packages list raises ValueError."""
     output = tmp_path / "app.pyz"

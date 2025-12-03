@@ -130,6 +130,12 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         help="Shebang line (overrides config)",
     )
     build_parser.add_argument(
+        "--no-shebang",
+        action="store_false",
+        dest="shebang",
+        help="Disable shebang insertion (overrides config)",
+    )
+    build_parser.add_argument(
         "--compress",
         action="store_true",
         help="Compress the zip file (overrides config)",

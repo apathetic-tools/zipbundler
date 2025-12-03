@@ -25,7 +25,6 @@ Some of these we just want to consider, and may not want to implement.
 - **Config File Support**: `.zipbundler.jsonc` or `pyproject.toml` integration
 - **Package Selection**: Configure which packages to include
 - **Output Path**: Configurable output directory and filename
-- **Shebang Control**: Option to enable/disable shebang insertion
 - **Entry Point Configuration**: Define entry points in config file
 
 ### Phase 3: Advanced Features
