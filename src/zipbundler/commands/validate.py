@@ -8,19 +8,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-from apathetic_utils import load_jsonc
+from apathetic_utils import load_jsonc, load_toml
 
 from zipbundler.logs import getAppLogger
-
-
-# Try to import tomllib (Python 3.11+) or tomli (fallback)
-try:
-    import tomllib  # type: ignore[import-not-found]
-except ImportError:
-    try:
-        import tomli as tomllib  # type: ignore[import-not-found]
-    except ImportError:
-        tomllib = None
 
 
 def _find_config(config_path: str | None, cwd: Path) -> Path | None:
@@ -82,23 +72,17 @@ def _load_toml_config(config_path: Path) -> dict[str, Any]:
     logger = getAppLogger()
     logger.trace(f"[load_config] Loading TOML from {config_path}")
 
-    if tomllib is None:
-        msg = (
-            "TOML support requires Python 3.11+ or 'tomli' package. "
-            "Install with: pip install tomli"
-        )
-        raise ValueError(msg)
-
-    # At this point, tomllib is guaranteed to be not None
     try:
-        text = config_path.read_text(encoding="utf-8")
-        data: dict[str, Any] = tomllib.loads(text)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        tool_config: dict[str, Any] = data.get("tool", {}).get("zipbundler", {})  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        data = load_toml(config_path)
+        if not isinstance(data, dict):
+            msg = f"Config file must contain a TOML object, got {type(data).__name__}"
+            raise TypeError(msg)  # noqa: TRY301
+        tool_config: dict[str, Any] = data.get("tool", {}).get("zipbundler", {})
         if not tool_config:
             msg = "No [tool.zipbundler] section found in pyproject.toml"
             raise ValueError(msg)  # noqa: TRY301
-        return tool_config  # pyright: ignore[reportUnknownVariableType]
-    except (ValueError, OSError) as e:
+        return tool_config
+    except (ValueError, TypeError, OSError) as e:
         msg = f"Error loading TOML config from '{config_path.name}': {e}"
         raise ValueError(msg) from e
 
