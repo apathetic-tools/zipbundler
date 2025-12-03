@@ -234,6 +234,19 @@ def _setup_parser() -> argparse.ArgumentParser:
         default=None,
         help="Watch interval in seconds (default: 1.0)",
     )
+    watch_parser.add_argument(
+        "--main-guard",
+        action="store_true",
+        default=True,
+        dest="main_guard",
+        help="Wrap entry point in 'if __name__ == \"__main__\":' guard (default: True)",
+    )
+    watch_parser.add_argument(
+        "--no-main-guard",
+        action="store_false",
+        dest="main_guard",
+        help="Do not wrap entry point in main guard",
+    )
 
     # Add log level options to watch parser
     log_level_watch = watch_parser.add_mutually_exclusive_group()

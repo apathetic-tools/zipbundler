@@ -26,7 +26,6 @@ Some of these we just want to consider, and may not want to implement.
 - **Package Selection**: Configure which packages to include
 - **Output Path**: Configurable output directory and filename
 - **Shebang Control**: Option to enable/disable shebang insertion
-- **Main Guard Control**: Option to enable/disable `if __name__ == "__main__"` insertion
 - **Entry Point Configuration**: Define entry points in config file
 
 ### Phase 3: Advanced Features
@@ -73,7 +72,6 @@ Some of these we just want to consider, and may not want to implement.
   // Control code generation
   "options": {
     "shebang": true,           // Insert shebang line (default: true)
-    "main_guard": true,         // Insert if __name__ == "__main__" guard (default: true)
     "compression": "deflate"   // zipfile compression method (default: "deflate")
   },
   
@@ -93,7 +91,7 @@ Some of these we just want to consider, and may not want to implement.
 - **Package Scanner**: Discover and scan Python packages
 - **Zip Builder**: Core logic for creating zip files
 - **Entry Point Handler**: Handle entry point generation
-- **Code Generator**: Generate shebang and main guard code
+- **Code Generator**: Generate shebang and entry point code
 
 ## 📦 Preset Library
 

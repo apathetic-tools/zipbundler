@@ -41,6 +41,7 @@ def handle_watch_command(args: argparse.Namespace) -> int:
                 shebang=args.shebang or "#!/usr/bin/env python3",
                 compress=args.compress,
                 exclude=args.exclude,
+                main_guard=getattr(args, "main_guard", True),
             )
 
         # Start watching

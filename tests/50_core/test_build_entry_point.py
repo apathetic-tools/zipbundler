@@ -10,7 +10,7 @@ import zipbundler.build as mod_build
 
 
 def test_build_zipapp_with_entry_point(tmp_path: Path) -> None:
-    """Test building a zipapp with an entry point."""
+    """Test building a zipapp with an entry point (default main_guard=True)."""
     # Create a test package
     pkg_dir = tmp_path / "mypackage"
     pkg_dir.mkdir()
@@ -30,11 +30,12 @@ def test_build_zipapp_with_entry_point(tmp_path: Path) -> None:
     assert output.exists()
     assert output.is_file()
 
-    # Verify __main__.py contains entry point
+    # Verify __main__.py contains entry point wrapped in main guard (default)
     with zipfile.ZipFile(output, "r") as zf:
         assert "__main__.py" in zf.namelist()
         main_content = zf.read("__main__.py").decode()
-        assert main_content == entry_point
+        assert "if __name__ == '__main__':" in main_content
+        assert entry_point in main_content
 
     # Verify shebang was prepended
     content = output.read_bytes()
@@ -88,9 +89,10 @@ def test_build_zipapp_with_module_entry_point(tmp_path: Path) -> None:
     # Verify zip file was created
     assert output.exists()
 
-    # Verify __main__.py contains entry point
+    # Verify __main__.py contains entry point wrapped in main guard (default)
     with zipfile.ZipFile(output, "r") as zf:
         main_content = zf.read("__main__.py").decode()
+        assert "if __name__ == '__main__':" in main_content
         assert "from mypackage.main import main" in main_content
         assert "main()" in main_content
 
@@ -186,3 +188,92 @@ def test_build_zipapp_multiple_packages(tmp_path: Path) -> None:
         assert "package1/mod1.py" in names
         assert "package2/__init__.py" in names
         assert "package2/mod2.py" in names
+
+
+def test_build_zipapp_with_main_guard_enabled(tmp_path: Path) -> None:
+    """Test building a zipapp with main_guard=True (default)."""
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def main():\n    print('Hello')\n")
+
+    output = tmp_path / "app.pyz"
+    entry_point = "from mypackage.module import main\nmain()"
+
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=entry_point,
+        main_guard=True,
+    )
+
+    # Verify __main__.py contains entry point wrapped in main guard
+    with zipfile.ZipFile(output, "r") as zf:
+        main_content = zf.read("__main__.py").decode()
+        assert main_content.startswith("if __name__ == '__main__':")
+        assert "    from mypackage.module import main" in main_content
+        assert "    main()" in main_content
+        # Verify proper indentation
+        lines = main_content.splitlines()
+        assert lines[0] == "if __name__ == '__main__':"
+        assert lines[1].startswith("    ")
+
+
+def test_build_zipapp_with_main_guard_disabled(tmp_path: Path) -> None:
+    """Test building a zipapp with main_guard=False."""
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def main():\n    print('Hello')\n")
+
+    output = tmp_path / "app.pyz"
+    entry_point = "from mypackage.module import main; main()"
+
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=entry_point,
+        main_guard=False,
+    )
+
+    # Verify __main__.py contains entry point without main guard
+    with zipfile.ZipFile(output, "r") as zf:
+        main_content = zf.read("__main__.py").decode()
+        assert main_content == entry_point
+        assert "if __name__ == '__main__':" not in main_content
+
+
+def test_build_zipapp_main_guard_multiline_entry_point(tmp_path: Path) -> None:
+    """Test main_guard with multi-line entry point code."""
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def main():\n    print('Hello')\n")
+
+    output = tmp_path / "app.pyz"
+    entry_point = (
+        "import sys\n"
+        "from mypackage.module import main\n"
+        "if len(sys.argv) > 1:\n"
+        "    main()\n"
+        "else:\n"
+        "    print('No args')"
+    )
+
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=entry_point,
+        main_guard=True,
+    )
+
+    # Verify __main__.py contains multi-line entry point properly indented
+    with zipfile.ZipFile(output, "r") as zf:
+        main_content = zf.read("__main__.py").decode()
+        assert main_content.startswith("if __name__ == '__main__':")
+        # All lines should be indented
+        lines = main_content.splitlines()
+        assert lines[0] == "if __name__ == '__main__':"
+        for line in lines[1:]:
+            if line.strip():  # Skip empty lines
+                assert line.startswith("    "), f"Line not indented: {line!r}"

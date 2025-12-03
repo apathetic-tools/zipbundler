@@ -45,6 +45,7 @@ def build_zipapp(  # noqa: PLR0912, PLR0915
     compression_level: int | None = None,
     dry_run: bool = False,
     exclude: list[str] | None = None,
+    main_guard: bool = True,
 ) -> None:
     """Build a zipapp-compatible zip file.
 
@@ -61,6 +62,8 @@ def build_zipapp(  # noqa: PLR0912, PLR0915
             Higher values = more compression but slower.
         dry_run: If True, preview what would be bundled without creating zip.
         exclude: Optional list of glob patterns for files/directories to exclude.
+        main_guard: If True, wrap entry point in `if __name__ == "__main__":` guard.
+            Defaults to True. Only applies when entry_point is provided.
 
     Raises:
         ValueError: If output path is invalid or packages are empty
@@ -141,8 +144,23 @@ def build_zipapp(  # noqa: PLR0912, PLR0915
     with zipfile.ZipFile(output, "w", compression, compresslevel=compresslevel) as zf:
         # Write entry point if provided
         if entry_point is not None:
-            zf.writestr("__main__.py", entry_point)
-            logger.debug("Wrote __main__.py with entry point")
+            # Wrap entry point in main guard if requested
+            if main_guard:
+                # Indent each line of entry_point by 4 spaces
+                indented_lines = [
+                    "    " + line if line.strip() else line
+                    for line in entry_point.splitlines(keepends=True)
+                ]
+                indented_code = "".join(indented_lines)
+                # Remove trailing newline from indented code if present
+                indented_code = indented_code.removesuffix("\n")
+                main_content = f"if __name__ == '__main__':\n{indented_code}"
+            else:
+                main_content = entry_point
+            zf.writestr("__main__.py", main_content)
+            logger.debug(
+                "Wrote __main__.py with entry point (main_guard=%s)", main_guard
+            )
 
         # Add all Python files from packages
         for file_path, arcname in files_to_include:
