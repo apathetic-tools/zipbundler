@@ -6,6 +6,7 @@ from .info import handle_info_command
 from .init import handle_init_command
 from .list import handle_list_command
 from .validate import handle_validate_command
+from .watch import handle_watch_command
 
 
 __all__ = [
@@ -13,4 +14,5 @@ __all__ = [
     "handle_init_command",
     "handle_list_command",
     "handle_validate_command",
+    "handle_watch_command",
 ]

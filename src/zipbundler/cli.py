@@ -9,6 +9,7 @@ from .commands import (
     handle_init_command,
     handle_list_command,
     handle_validate_command,
+    handle_watch_command,
 )
 from .logs import getAppLogger
 from .meta import PROGRAM_DISPLAY
@@ -187,10 +188,81 @@ def _setup_parser() -> argparse.ArgumentParser:
         help="Set log verbosity level.",
     )
 
+    # Watch command
+    watch_parser = subparsers.add_parser(
+        "watch",
+        help="Watch for changes and rebuild automatically",
+    )
+    watch_parser.add_argument(
+        "source",
+        nargs="+",
+        help="Source package directories to watch",
+    )
+    watch_parser.add_argument(
+        "-o",
+        "--output",
+        required=True,
+        help="Output file path for the zipapp",
+    )
+    watch_parser.add_argument(
+        "-m",
+        "--main",
+        dest="entry_point",
+        help="Entry point (module:function or module)",
+    )
+    watch_parser.add_argument(
+        "-p",
+        "--python",
+        dest="shebang",
+        help="Shebang line (interpreter path)",
+    )
+    watch_parser.add_argument(
+        "--compress",
+        action="store_true",
+        help="Compress the zip file",
+    )
+    watch_parser.add_argument(
+        "--exclude",
+        nargs="+",
+        help="Exclude patterns (glob patterns)",
+    )
+    watch_parser.add_argument(
+        "--interval",
+        type=float,
+        default=None,
+        help="Watch interval in seconds (default: 1.0)",
+    )
+
+    # Add log level options to watch parser
+    log_level_watch = watch_parser.add_mutually_exclusive_group()
+    log_level_watch.add_argument(
+        "-q",
+        "--quiet",
+        action="store_const",
+        const="warning",
+        dest="log_level",
+        help="Suppress non-critical output (same as --log-level warning).",
+    )
+    log_level_watch.add_argument(
+        "-v",
+        "--verbose",
+        action="store_const",
+        const="debug",
+        dest="log_level",
+        help="Verbose output (same as --log-level debug).",
+    )
+    log_level_watch.add_argument(
+        "--log-level",
+        choices=LEVEL_ORDER,
+        default=None,
+        dest="log_level",
+        help="Set log verbosity level.",
+    )
+
     return parser
 
 
-def main(args: list[str] | None = None) -> int:  # noqa: PLR0911
+def main(args: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
     """Main entry point for the zipbundler CLI."""
     logger = getAppLogger()
 
@@ -202,7 +274,7 @@ def main(args: list[str] | None = None) -> int:  # noqa: PLR0911
         # Extract source from args (everything that's not a flag and not a command)
         source: str | None = None
         filtered_args: list[str] = []
-        commands = {"init", "list", "validate"}
+        commands = {"init", "list", "validate", "watch"}
         for arg in args:
             if arg == "--info" or arg.startswith("-"):
                 filtered_args.append(arg)
@@ -244,6 +316,8 @@ def main(args: list[str] | None = None) -> int:  # noqa: PLR0911
         return handle_list_command(parsed_args)
     if parsed_args.command == "validate":
         return handle_validate_command(parsed_args)
+    if parsed_args.command == "watch":
+        return handle_watch_command(parsed_args)
 
     # No command provided and no zipapp-style usage
     if not parsed_args.source:
