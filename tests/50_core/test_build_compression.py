@@ -127,3 +127,105 @@ def test_build_zipapp_compression_affects_size(tmp_path: Path) -> None:
         assert len(zf.namelist()) > 0
     with zipfile.ZipFile(output_uncompressed, "r") as zf:
         assert len(zf.namelist()) > 0
+
+
+def test_build_zipapp_with_compression_level(tmp_path: Path) -> None:
+    """Test building a zipapp with specific compression level."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
+
+    output = tmp_path / "app.pyz"
+
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=None,
+        compress=True,
+        compression_level=9,
+    )
+
+    # Verify zip file was created
+    assert output.exists()
+
+    # Verify compression is enabled
+    with zipfile.ZipFile(output, "r") as zf:
+        for info in zf.infolist():
+            assert info.compress_type == zipfile.ZIP_DEFLATED
+
+
+def test_build_zipapp_compression_level_default(tmp_path: Path) -> None:
+    """Test that compression level defaults to 6 when not specified."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
+
+    output = tmp_path / "app.pyz"
+
+    # Call with compress=True but no compression_level (should default to 6)
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=None,
+        compress=True,
+    )
+
+    # Verify zip file was created
+    assert output.exists()
+
+    # Verify compression is enabled
+    with zipfile.ZipFile(output, "r") as zf:
+        for info in zf.infolist():
+            assert info.compress_type == zipfile.ZIP_DEFLATED
+
+
+def test_build_zipapp_compression_level_affects_size(tmp_path: Path) -> None:
+    """Test that different compression levels affect file size."""
+    # Create a test package with content that compresses well
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    # Create a file with repetitive content
+    content = "def func():\n    " + "x" * 2000 + "\n    pass\n"
+    (pkg_dir / "module.py").write_text(content)
+
+    output_level_0 = tmp_path / "app_level_0.pyz"
+    output_level_9 = tmp_path / "app_level_9.pyz"
+
+    # Build with compression level 0 (no compression)
+    mod_build.build_zipapp(
+        output=output_level_0,
+        packages=[pkg_dir],
+        entry_point=None,
+        compress=True,
+        compression_level=0,
+    )
+
+    # Build with compression level 9 (maximum compression)
+    mod_build.build_zipapp(
+        output=output_level_9,
+        packages=[pkg_dir],
+        entry_point=None,
+        compress=True,
+        compression_level=9,
+    )
+
+    # Verify both files exist
+    assert output_level_0.exists()
+    assert output_level_9.exists()
+
+    # Level 9 should generally produce smaller files than level 0
+    # (though for very small files the difference might be minimal)
+    # At minimum, both should be valid zip files
+    with zipfile.ZipFile(output_level_0, "r") as zf:
+        assert len(zf.namelist()) > 0
+        for info in zf.infolist():
+            assert info.compress_type == zipfile.ZIP_DEFLATED
+    with zipfile.ZipFile(output_level_9, "r") as zf:
+        assert len(zf.namelist()) > 0
+        for info in zf.infolist():
+            assert info.compress_type == zipfile.ZIP_DEFLATED

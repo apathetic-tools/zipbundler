@@ -35,13 +35,14 @@ def _matches_exclude_pattern(
     return is_excluded_raw(file_path, exclude_patterns, root)
 
 
-def build_zipapp(
+def build_zipapp(  # noqa: PLR0912, PLR0915
     output: Path,
     packages: list[Path],
     entry_point: str | None = None,
     shebang: str = "#!/usr/bin/env python3",
     *,
     compress: bool = False,
+    compression_level: int | None = None,
     dry_run: bool = False,
     exclude: list[str] | None = None,
 ) -> None:
@@ -55,6 +56,9 @@ def build_zipapp(
         shebang: Shebang line to prepend to the zip file
         compress: Whether to compress the zip file using deflate method.
             Defaults to False (no compression) to match zipapp behavior.
+        compression_level: Compression level for deflate method (0-9).
+            Only used when compress=True. Defaults to 6 if not specified.
+            Higher values = more compression but slower.
         dry_run: If True, preview what would be bundled without creating zip.
         exclude: Optional list of glob patterns for files/directories to exclude.
 
@@ -68,11 +72,17 @@ def build_zipapp(
         raise ValueError(xmsg)
 
     compression = zipfile.ZIP_DEFLATED if compress else zipfile.ZIP_STORED
+    # Default compression level is 6 (zlib default) if not specified
+    if compression_level is None:
+        compression_level = 6
     exclude_patterns = exclude or []
     logger.debug("Building zipapp: %s", output)
     logger.debug("Packages: %s", [str(p) for p in packages])
     logger.debug("Entry point: %s", entry_point)
-    logger.debug("Compression: %s", "deflate" if compress else "stored")
+    if compress:
+        logger.debug("Compression: deflate (level %d)", compression_level)
+    else:
+        logger.debug("Compression: stored")
     logger.debug("Dry run: %s", dry_run)
     if exclude_patterns:
         logger.debug("Exclude patterns: %s", exclude_patterns)
@@ -112,7 +122,10 @@ def build_zipapp(
         summary_parts.append(f"Files: {file_count}")
         if entry_point is not None:
             summary_parts.append("Entry point: yes")
-        summary_parts.append(f"Compression: {'deflate' if compress else 'stored'}")
+        if compress:
+            summary_parts.append(f"Compression: deflate (level {compression_level})")
+        else:
+            summary_parts.append("Compression: stored")
         summary_parts.append(f"Shebang: {shebang}")
         logger.info("🧪 (dry-run) Would create zipapp: %s", " • ".join(summary_parts))
         return
@@ -120,7 +133,12 @@ def build_zipapp(
     # Normal build mode: create the zip file
     output.parent.mkdir(parents=True, exist_ok=True)
 
-    with zipfile.ZipFile(output, "w", compression) as zf:
+    # Use compresslevel parameter when compression is ZIP_DEFLATED
+    compresslevel: int | None = (
+        compression_level if compression == zipfile.ZIP_DEFLATED else None
+    )
+
+    with zipfile.ZipFile(output, "w", compression, compresslevel=compresslevel) as zf:
         # Write entry point if provided
         if entry_point is not None:
             zf.writestr("__main__.py", entry_point)

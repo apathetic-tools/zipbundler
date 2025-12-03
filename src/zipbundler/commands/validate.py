@@ -267,15 +267,37 @@ def _validate_options_field(
         return
 
     # Validate compression method
-    if "compression" not in options:
-        return
+    compression: Any = None
+    if "compression" in options:
+        compression = options["compression"]  # pyright: ignore[reportUnknownVariableType]
+        valid_compression = {"deflate", "stored", "bzip2", "lzma"}
+        if compression not in valid_compression:
+            valid_str = ", ".join(sorted(valid_compression))
+            msg = (
+                f"Unknown compression method '{compression}'. "
+                f"Valid options: {valid_str}"
+            )
+            warnings.append(msg)
 
-    compression: Any = options["compression"]  # pyright: ignore[reportUnknownVariableType]
-    valid_compression = {"deflate", "stored", "bzip2", "lzma"}
-    if compression not in valid_compression:
-        valid_str = ", ".join(sorted(valid_compression))
-        msg = f"Unknown compression method '{compression}'. Valid options: {valid_str}"
-        warnings.append(msg)
+    # Validate compression_level
+    max_compression_level = 9
+    if "compression_level" in options:
+        compression_level: Any = options["compression_level"]  # pyright: ignore[reportUnknownVariableType]
+        if not isinstance(compression_level, int):
+            msg = "Field 'options.compression_level' must be an integer"
+            warnings.append(msg)
+        elif compression_level < 0 or compression_level > max_compression_level:
+            msg = (
+                f"Field 'options.compression_level' must be between 0 and "
+                f"{max_compression_level}"
+            )
+            warnings.append(msg)
+        elif compression is not None and compression != "deflate":
+            msg = (
+                "Field 'options.compression_level' is only valid when "
+                f"'options.compression' is 'deflate' (got '{compression}')"
+            )
+            warnings.append(msg)
 
 
 def _validate_config_structure(
