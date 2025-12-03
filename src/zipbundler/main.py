@@ -9,6 +9,75 @@ from .build import list_files
 from .logs import getAppLogger
 
 
+def _get_default_config_content() -> str:
+    """Generate default .zipbundler.jsonc config file content."""
+    return """{
+  // Packages to include (glob patterns or package names)
+  "packages": [
+    "src/my_package/**/*.py"
+  ],
+
+  // Files/directories to exclude (glob patterns)
+  "exclude": [
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/*.pyo",
+    "**/tests/**",
+    "**/.git/**"
+  ],
+
+  // Output configuration
+  "output": {
+    "path": "dist/my_package.zip"
+  },
+
+  // Entry point for executable zip (optional)
+  // "entry_point": "my_package.__main__:main",
+
+  // Control code generation
+  "options": {
+    "shebang": "/usr/bin/env python3",
+    "main_guard": true,
+    "compression": "deflate"
+  },
+
+  // Metadata (optional)
+  // "metadata": {
+  //   "display_name": "My Package",
+  //   "description": "Package description",
+  //   "version": "1.0.0"
+  // }
+}
+"""
+
+
+def _handle_init_command(args: argparse.Namespace) -> int:
+    """Handle the init subcommand."""
+    logger = getAppLogger()
+
+    config_path = Path(args.output or ".zipbundler.jsonc")
+
+    if config_path.exists() and not args.force:
+        logger.error(
+            "Configuration file already exists: %s\nUse --force to overwrite.",
+            config_path,
+        )
+        return 1
+
+    try:
+        config_content = _get_default_config_content()
+        config_path.write_text(config_content, encoding="utf-8")
+        logger.info("Created configuration file: %s", config_path)
+    except OSError:
+        logger.exception("Failed to create configuration file")
+        return 1
+    except Exception as e:  # noqa: BLE001
+        logger.criticalIfNotDebug("Unexpected error: %s", e)
+        return 1
+    else:
+        return 0
+
+
 def _handle_list_command(args: argparse.Namespace) -> int:
     """Handle the list subcommand."""
     logger = getAppLogger()
@@ -80,6 +149,48 @@ def main(args: list[str] | None = None) -> int:
         dest="command", help="Command to run", required=True
     )
 
+    # Init command
+    init_parser = subparsers.add_parser(
+        "init",
+        help="Create a default .zipbundler.jsonc config file",
+    )
+    init_parser.add_argument(
+        "-o",
+        "--output",
+        help="Output path for config file (default: .zipbundler.jsonc)",
+    )
+    init_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing config file",
+    )
+
+    # Add log level options to init parser
+    log_level_init = init_parser.add_mutually_exclusive_group()
+    log_level_init.add_argument(
+        "-q",
+        "--quiet",
+        action="store_const",
+        const="warning",
+        dest="log_level",
+        help="Suppress non-critical output (same as --log-level warning).",
+    )
+    log_level_init.add_argument(
+        "-v",
+        "--verbose",
+        action="store_const",
+        const="debug",
+        dest="log_level",
+        help="Verbose output (same as --log-level debug).",
+    )
+    log_level_init.add_argument(
+        "--log-level",
+        choices=LEVEL_ORDER,
+        default=None,
+        dest="log_level",
+        help="Set log verbosity level.",
+    )
+
     # List command
     list_parser = subparsers.add_parser(
         "list",
@@ -133,6 +244,8 @@ def main(args: list[str] | None = None) -> int:
     resolved_log_level = logger.determineLogLevel(args=parsed_args)
     logger.setLevel(resolved_log_level)
 
+    if parsed_args.command == "init":
+        return _handle_init_command(parsed_args)
     if parsed_args.command == "list":
         return _handle_list_command(parsed_args)
 
