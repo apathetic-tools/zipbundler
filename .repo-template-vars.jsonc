@@ -1,0 +1,16 @@
+{
+    "project_title": "Python-Apathetic-Template",
+    "project_description": "Presets for guiding agentic AI workflows",
+    "project_package": "python_apathetic_template",
+    "project_name": "python-apathetic-template",
+    "project_repo": "https://github.com/apathetic-tools/python-apathetic-template",
+    "project_author": "Apathetic Tools",
+    "project_org": "apathetic-tools",
+    "project_license": "MIT-a-NOAI",
+    "project_license_url": "https://github.com/apathetic-tools/python-apathetic-template/blob/main/LICENSE",
+    "project_license_text": "MIT-a-NOAI License",
+    "project_docs_url": "https://apathetic-tools.github.io/python-apathetic-template/",
+    "project_pypi_url": "https://pypi.org/project/python-apathetic-template/",
+    "project_script_name": "python-apathetic-template",
+    "project_copyright_year": "2025"
+}

@@ -1,0 +1,85 @@
+# Jekyll configuration for GitHub Pages
+# general config reference: https://jekyllrb.com/docs/configuration/
+
+title: {{project_title}}
+description: {{project_description}}
+url: https://{{project_org}}.github.io
+baseurl: /{{project_name}}
+
+# supported plugins: https://pages.github.com/versions.json
+plugins:
+# GHP locked value
+  - jekyll-coffeescript
+  - jekyll-default-layout
+  - jekyll-gist
+  - jekyll-github-metadata
+  - jekyll-optional-front-matter
+  - jekyll-paginate
+  - jekyll-readme-index
+  - jekyll-titles-from-headings
+  - jekyll-relative-links
+# extra
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-remote-theme
+  - jemoji
+
+# Theme (using remote theme to get latest minima with dark mode support)
+remote_theme: jekyll/minima
+
+# Minima theme settings
+minima:
+  skin: solarized
+
+  # Navigation
+  nav_pages:
+    - index.md
+    - getting-started.md
+    - configuration.md
+    - configuration-reference.md
+    - cli-reference.md
+    - api.md
+    - examples.md
+
+  hide_site_feed_link: true
+  social_links:
+    - title: GitHub Repository
+      icon: github
+      url: "{{project_repo}}"
+    - title: PyPI
+      icon: pypi
+      url: "{{project_pypi_url}}"
+
+
+# Exclude files from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Site metadata
+author: 
+  name: 😐 {{project_author}}
+  url: https://{{project_org}}.github.io/
+
+
+# Build settings
+lsi: false  # GHP locked value
+safe: true  # GHP locked value
+source: ["docs"]  # GHP locked value  # may need to to comment for local dev
+incremental: false  # GHP locked value
+highlighter: rouge  # GHP locked value
+gist:  # GHP locked value
+  noscript: false  # GHP locked value
+markdown: kramdown
+kramdown:  # GHP locked value
+  input: GFM
+  math_engine: mathjax  # GHP locked value
+  syntax_highlighter: rouge  # GHP locked value
+
+
+

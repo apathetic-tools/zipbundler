@@ -1,0 +1,29 @@
+// {{project_title}}'s self-hosting configuration
+// This file defines how to stitch {{project_package}} itself into a single-file python script
+
+{
+  // Stitching configuration for the main python-apathetic-template package
+  "package": "{{project_package}}",
+
+  // Display name and description for output header
+  "display_name": "{{project_title}}",
+  "description": "{{project_description}}",
+
+  // Repository URL (appears in generated header)
+  "repo": "{{project_repo}}",
+
+  // License text for stitched output
+  "license": "License: MIT-aNOAI\nFull text: {{project_repo}}/blob/main/LICENSE",      
+
+  // Source modules to include in the stitch
+  // These are glob patterns relative to the source directory
+  "include": [
+    "src/{{project_package}}/**/*.py",
+    "apathetic_logging/**/*.py",  // Include installed apathetic-logging package
+    "apathetic_utils/**/*.py"  // Include installed apathetic-utils package
+  ],
+
+  // Global configuration defaults
+  "log_level": "warning"
+}
+

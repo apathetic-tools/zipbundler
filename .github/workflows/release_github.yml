@@ -1,0 +1,96 @@
+# .github/workflows/release.yml
+name: Release on Github
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to create releases and tags
+      id-token: write  # Required for PyPI publishing (if enabled)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v4
+        with:
+          poetry-version: "latest"
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run checks
+        run: poetry run poe check
+
+      - name: Build single-file script
+        run: poetry run poe build:script
+
+      - name: Build zipapp
+        run: poetry run poe build:zipapp
+
+      - name: Semantic Release (Version & Tag)
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          output=$(poetry run semantic-release version 2>&1) || true
+          echo "$output"
+          # Check if a new version was created (looks for version number pattern)
+          if echo "$output" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+|next version is"; then
+            echo "released=true" >> $GITHUB_OUTPUT
+          else
+            echo "released=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Semantic Release (Publish to GitHub)
+        if: steps.release.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Run semantic-release publish and capture exit code
+          if ! poetry run semantic-release publish; then
+            echo "::error::semantic-release publish failed"
+            exit 1
+          fi
+
+      - name: Upload custom release assets
+        if: steps.release.outputs.released == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the latest tag created by semantic-release
+          TAG=$(git describe --tags --abbrev=0)
+          if [ -z "$TAG" ]; then
+            echo "::error::No tag found for release"
+            exit 1
+          fi
+          if [ ! -f dist/{{project_script_name}}.py ] || [ ! -f dist/{{project_script_name}}.pyz ]; then
+            echo "::error::Required build files not found in dist/"
+            exit 1
+          fi
+          # Upload assets - fail if upload fails
+          if ! gh release upload "$TAG" dist/{{project_script_name}}.py dist/{{project_script_name}}.pyz --clobber; then
+            echo "::error::Failed to upload release assets"
+            exit 1
+          fi
+
