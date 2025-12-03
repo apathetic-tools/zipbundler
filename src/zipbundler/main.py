@@ -138,10 +138,8 @@ def _handle_list_command(args: argparse.Namespace) -> int:
     return result
 
 
-def main(args: list[str] | None = None) -> int:
-    """Main entry point for the zipbundler CLI."""
-    logger = getAppLogger()
-
+def _setup_parser() -> argparse.ArgumentParser:
+    """Define and return the CLI argument parser."""
     parser = argparse.ArgumentParser(
         description="Bundle your packages into a runnable, importable zip"
     )
@@ -238,6 +236,14 @@ def main(args: list[str] | None = None) -> int:
         help="Set log verbosity level.",
     )
 
+    return parser
+
+
+def main(args: list[str] | None = None) -> int:
+    """Main entry point for the zipbundler CLI."""
+    logger = getAppLogger()
+
+    parser = _setup_parser()
     parsed_args = parser.parse_args(args)
 
     # Initialize logger with CLI args
