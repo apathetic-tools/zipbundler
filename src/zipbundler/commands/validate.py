@@ -284,6 +284,30 @@ def _validate_options_field(
             warnings.append(msg)
 
 
+def _validate_metadata_field(
+    config: dict[str, Any],
+    warnings: list[str],
+) -> None:
+    """Validate metadata field."""
+    if "metadata" not in config:
+        return
+
+    metadata = config["metadata"]
+    if not isinstance(metadata, dict):
+        warnings.append("Field 'metadata' must be an object")
+        return
+
+    # Validate metadata fields (all optional, but should be strings if present)
+    string_fields = ["display_name", "description", "version", "author", "license"]
+    for field in string_fields:
+        if field in metadata:
+            value: Any = metadata[field]  # pyright: ignore[reportUnknownVariableType]
+            if not isinstance(value, str):
+                type_name = type(value).__name__  # pyright: ignore[reportUnknownArgumentType]
+                msg = f"Field 'metadata.{field}' must be a string, got {type_name}"
+                warnings.append(msg)
+
+
 def validate_config_structure(
     config: dict[str, Any],
     cwd: Path,
@@ -316,6 +340,9 @@ def validate_config_structure(
 
     # --- Validate options field ---
     _validate_options_field(config, warnings)
+
+    # --- Validate metadata field ---
+    _validate_metadata_field(config, warnings)
 
     # --- Determine validity ---
     is_valid = len(errors) == 0 and (not strict or len(warnings) == 0)

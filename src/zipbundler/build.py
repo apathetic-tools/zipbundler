@@ -10,6 +10,44 @@ from apathetic_utils import is_excluded_raw
 from .logs import getAppLogger
 
 
+def _generate_pkg_info(metadata: dict[str, str] | None) -> str | None:
+    """Generate PKG-INFO content from metadata dictionary.
+
+    PKG-INFO follows the Python packaging metadata format (PEP 241/314).
+
+    Args:
+        metadata: Dictionary with optional keys: display_name, description,
+            version, author, license
+
+    Returns:
+        PKG-INFO content as string, or None if no metadata provided
+    """
+    if not metadata:
+        return None
+
+    lines: list[str] = []
+    # Required field: Name (use display_name or fallback)
+    name = metadata.get("display_name") or metadata.get("name", "Unknown")
+    lines.append(f"Name: {name}")
+
+    # Optional fields
+    if "version" in metadata:
+        lines.append(f"Version: {metadata['version']}")
+    if "description" in metadata:
+        # PKG-INFO description can be multi-line, but we'll keep it simple
+        desc = metadata["description"].replace("\n", " ")
+        lines.append(f"Summary: {desc}")
+    if "author" in metadata:
+        lines.append(f"Author: {metadata['author']}")
+    if "license" in metadata:
+        lines.append(f"License: {metadata['license']}")
+
+    # Add metadata version (PEP 314 format)
+    lines.append("Metadata-Version: 2.1")
+
+    return "\n".join(lines) + "\n"
+
+
 def _matches_exclude_pattern(
     file_path: Path, _arcname: Path, exclude_patterns: list[str], root: Path
 ) -> bool:
@@ -35,7 +73,7 @@ def _matches_exclude_pattern(
     return is_excluded_raw(file_path, exclude_patterns, root)
 
 
-def build_zipapp(  # noqa: PLR0912, PLR0915
+def build_zipapp(  # noqa: C901, PLR0912, PLR0915
     output: Path,
     packages: list[Path],
     entry_point: str | None = None,
@@ -46,6 +84,7 @@ def build_zipapp(  # noqa: PLR0912, PLR0915
     dry_run: bool = False,
     exclude: list[str] | None = None,
     main_guard: bool = True,
+    metadata: dict[str, str] | None = None,
 ) -> None:
     """Build a zipapp-compatible zip file.
 
@@ -64,6 +103,9 @@ def build_zipapp(  # noqa: PLR0912, PLR0915
         exclude: Optional list of glob patterns for files/directories to exclude.
         main_guard: If True, wrap entry point in `if __name__ == "__main__":` guard.
             Defaults to True. Only applies when entry_point is provided.
+        metadata: Optional dictionary with metadata fields (display_name, description,
+            version, author, license). If provided, a PKG-INFO file will be written
+            to the zip archive.
 
     Raises:
         ValueError: If output path is invalid or packages are empty
@@ -142,6 +184,12 @@ def build_zipapp(  # noqa: PLR0912, PLR0915
     )
 
     with zipfile.ZipFile(output, "w", compression, compresslevel=compresslevel) as zf:
+        # Write PKG-INFO if metadata is provided
+        pkg_info = _generate_pkg_info(metadata)
+        if pkg_info:
+            zf.writestr("PKG-INFO", pkg_info)
+            logger.debug("Wrote PKG-INFO with metadata")
+
         # Write entry point if provided
         if entry_point is not None:
             # Wrap entry point in main guard if requested

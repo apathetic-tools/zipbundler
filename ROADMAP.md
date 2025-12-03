@@ -30,7 +30,6 @@ Some of these we just want to consider, and may not want to implement.
 
 ### Phase 3: Advanced Features
 - **Dependency Resolution**: Include dependencies from installed packages
-- **Metadata Preservation**: Preserve package metadata and version info
 
 ## 🧰 CLI Commands
 

@@ -238,6 +238,22 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             logger.warning("exclude field must be a list, ignoring")
             exclude = None
 
+        # Extract metadata
+        metadata_config: dict[str, Any] | None = config.get("metadata")
+        metadata: dict[str, str] | None = None
+        if metadata_config:
+            if not isinstance(metadata_config, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+                logger.warning("metadata field must be an object, ignoring")
+            else:
+                # Convert metadata dict to dict[str, str],
+                # filtering out non-string values
+                metadata = {}
+                for key, value in metadata_config.items():
+                    if isinstance(value, str):
+                        metadata[key] = value
+                    else:
+                        logger.warning("metadata.%s must be a string, ignoring", key)
+
         # Extract options
         options: dict[str, Any] | None = config.get("options")
         shebang = "#!/usr/bin/env python3"
@@ -316,6 +332,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             exclude=exclude,
             main_guard=main_guard,
             dry_run=getattr(args, "dry_run", False),
+            metadata=metadata,
         )
     except (FileNotFoundError, ValueError, TypeError) as e:
         logger.errorIfNotDebug(str(e))
