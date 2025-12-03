@@ -5,7 +5,34 @@ import stat
 import zipfile
 from pathlib import Path
 
+from apathetic_utils import is_excluded_raw
+
 from .logs import getAppLogger
+
+
+def _matches_exclude_pattern(
+    file_path: Path, _arcname: Path, exclude_patterns: list[str], root: Path
+) -> bool:
+    """Check if a path matches any exclude pattern.
+
+    Uses apathetic_utils.is_excluded_raw for portable, cross-platform pattern matching.
+
+    Args:
+        file_path: Absolute file path
+        _arcname: Relative path that will be used in the zip archive
+            (unused, kept for API consistency)
+        exclude_patterns: List of glob patterns to match against
+        root: Root directory for resolving relative patterns
+
+    Returns:
+        True if the path matches any exclude pattern, False otherwise
+    """
+    if not exclude_patterns:
+        return False
+
+    # Use apathetic_utils for portable pattern matching
+    # It handles ** patterns, cross-platform path separators, and root-relative patterns
+    return is_excluded_raw(file_path, exclude_patterns, root)
 
 
 def build_zipapp(
@@ -16,6 +43,7 @@ def build_zipapp(
     *,
     compress: bool = False,
     dry_run: bool = False,
+    exclude: list[str] | None = None,
 ) -> None:
     """Build a zipapp-compatible zip file.
 
@@ -28,6 +56,7 @@ def build_zipapp(
         compress: Whether to compress the zip file using deflate method.
             Defaults to False (no compression) to match zipapp behavior.
         dry_run: If True, preview what would be bundled without creating zip.
+        exclude: Optional list of glob patterns for files/directories to exclude.
 
     Raises:
         ValueError: If output path is invalid or packages are empty
@@ -39,11 +68,14 @@ def build_zipapp(
         raise ValueError(xmsg)
 
     compression = zipfile.ZIP_DEFLATED if compress else zipfile.ZIP_STORED
+    exclude_patterns = exclude or []
     logger.debug("Building zipapp: %s", output)
     logger.debug("Packages: %s", [str(p) for p in packages])
     logger.debug("Entry point: %s", entry_point)
     logger.debug("Compression: %s", "deflate" if compress else "stored")
     logger.debug("Dry run: %s", dry_run)
+    if exclude_patterns:
+        logger.debug("Exclude patterns: %s", exclude_patterns)
 
     # Collect files that would be included
     files_to_include: list[tuple[Path, Path]] = []
@@ -55,9 +87,16 @@ def build_zipapp(
             logger.warning("Package path does not exist: %s", pkg_path)
             continue
 
+        # Use package parent as root for exclude pattern matching
+        exclude_root = pkg_path.parent
+
         for f in pkg_path.rglob("*.py"):
             # Calculate relative path from package parent
-            arcname = f.relative_to(pkg_path.parent)
+            arcname = f.relative_to(exclude_root)
+            # Check if file matches exclude patterns
+            if _matches_exclude_pattern(f, arcname, exclude_patterns, exclude_root):
+                logger.trace("Excluded file: %s (matched pattern)", f)
+                continue
             files_to_include.append((f, arcname))
             logger.trace("Added file: %s -> %s", f, arcname)
 
@@ -105,13 +144,14 @@ def list_files(
     packages: list[Path],
     *,
     count: bool = False,
+    exclude: list[str] | None = None,
 ) -> list[tuple[Path, Path]]:
     """List files that would be included in a zipapp bundle.
 
     Args:
         packages: List of package directories to scan
-        tree: If True, return files organized for tree display
         count: If True, only return count (empty list, count in logger)
+        exclude: Optional list of glob patterns for files/directories to exclude.
 
     Returns:
         List of tuples (file_path, arcname) for files that would be included
@@ -122,6 +162,10 @@ def list_files(
         xmsg = "At least one package must be provided"
         raise ValueError(xmsg)
 
+    exclude_patterns = exclude or []
+    if exclude_patterns:
+        logger.debug("Exclude patterns: %s", exclude_patterns)
+
     files_to_include: list[tuple[Path, Path]] = []
 
     # Add all Python files from packages
@@ -131,9 +175,16 @@ def list_files(
             logger.warning("Package path does not exist: %s", pkg_path)
             continue
 
+        # Use package parent as root for exclude pattern matching
+        exclude_root = pkg_path.parent
+
         for f in pkg_path.rglob("*.py"):
             # Calculate relative path from package parent
-            arcname = f.relative_to(pkg_path.parent)
+            arcname = f.relative_to(exclude_root)
+            # Check if file matches exclude patterns
+            if _matches_exclude_pattern(f, arcname, exclude_patterns, exclude_root):
+                logger.trace("Excluded file: %s (matched pattern)", f)
+                continue
             files_to_include.append((f, arcname))
             logger.trace("Found file: %s -> %s", f, arcname)
 

@@ -24,7 +24,6 @@ Some of these we just want to consider, and may not want to implement.
 ### Phase 2: Configuration System
 - **Config File Support**: `.zipbundler.jsonc` or `pyproject.toml` integration
 - **Package Selection**: Configure which packages to include
-- **Exclude Patterns**: Support glob patterns for excluding files/directories
 - **Output Path**: Configurable output directory and filename
 - **Shebang Control**: Option to enable/disable shebang insertion
 - **Main Guard Control**: Option to enable/disable `if __name__ == "__main__"` insertion
