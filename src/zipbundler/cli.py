@@ -12,6 +12,7 @@ from .commands import (
     handle_list_command,
     handle_validate_command,
     handle_watch_command,
+    handle_zipapp_style_command,
 )
 from .logs import getAppLogger
 from .meta import PROGRAM_DISPLAY, PROGRAM_PACKAGE
@@ -54,9 +55,42 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         help="Display the interpreter from an existing archive",
     )
 
+    # --- zipapp-style options (for zipapp-compatible interface) ---
+    # Note: source is handled manually when no subcommand is provided
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="Output file path (required for zipapp-style usage)",
+    )
+    parser.add_argument(
+        "-p",
+        "--python",
+        dest="shebang",
+        help="Shebang line (interpreter path, e.g., '/usr/bin/env python3')",
+    )
+    parser.add_argument(
+        "--no-shebang",
+        action="store_false",
+        dest="shebang",
+        help="Disable shebang insertion",
+    )
+    parser.add_argument(
+        "-m",
+        "--main",
+        dest="entry_point",
+        help="Main entry point (module:function or module)",
+    )
+    parser.add_argument(
+        "-c",
+        "--compress",
+        action="store_true",
+        help="Compress the zip file",
+    )
+
     subparsers = parser.add_subparsers(
         dest="command", help="Command to run", required=False
     )
+    # Note: subparsers are not required to support zipapp-style usage
 
     # Init command
     init_parser = subparsers.add_parser(
@@ -382,7 +416,7 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     return parser
 
 
-def main(args: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
+def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915
     """Main entry point for the zipbundler CLI."""
     logger = getAppLogger()
 
@@ -418,7 +452,33 @@ def main(args: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
         # Handle --info with extracted source
         return handle_info_command(source, parser)
 
-    parsed_args = parser.parse_args(args)
+    # Check if first argument is a known subcommand
+    # If not, it might be a source path for zipapp-style usage
+    known_commands = {"init", "build", "list", "validate", "watch"}
+    first_arg_is_command = args and len(args) > 0 and args[0] in known_commands
+
+    # Use parse_known_args to handle potential conflicts between source and subcommands
+    try:
+        parsed_args, remaining = parser.parse_known_args(args)
+    except SystemExit:
+        # If argparse failed because it tried to match first arg as subcommand,
+        # and it's not a known command, treat it as zipapp-style source
+        if not first_arg_is_command and args and len(args) > 0:
+            # Create a minimal namespace and treat first arg as source
+            parsed_args = argparse.Namespace()
+            parsed_args.command = None
+            parsed_args.version = False
+            parsed_args.info = False
+            parsed_args.output = None
+            parsed_args.shebang = None
+            parsed_args.entry_point = None
+            parsed_args.compress = False
+            # Parse known args without the first argument (treating it as source)
+            parsed_args, remaining = parser.parse_known_args(args[1:])
+            # Add first arg to remaining to be treated as source
+            remaining = [args[0], *remaining]
+        else:
+            raise
 
     # Initialize logger with CLI args
     resolved_log_level = logger.determineLogLevel(args=parsed_args)
@@ -441,16 +501,23 @@ def main(args: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
     if parsed_args.command == "watch":
         return handle_watch_command(parsed_args)
 
-    # No command provided and no zipapp-style usage
-    if not parsed_args.source:
+    # No command provided - check for zipapp-style usage
+    # Extract source from remaining args (first non-flag argument)
+    source_arg: str | None = None
+    for arg in remaining:
+        if not arg.startswith("-"):
+            source_arg = arg
+            break
+
+    if not source_arg:
         parser.error("No command specified. Use --help for usage.")
         return 1  # pragma: no cover
-    # SOURCE provided but no --info, this would be for building (not yet implemented)
-    parser.error(
-        "Building from SOURCE is not yet implemented. "
-        "Use 'zipbundler build' or 'zipbundler list' commands."
-    )
-    return 1  # pragma: no cover
+
+    # Set source on parsed_args for zipapp-style handler
+    parsed_args.source = source_arg
+
+    # SOURCE provided but no --info - this is zipapp-style building
+    return handle_zipapp_style_command(parsed_args)
 
 
 if __name__ == "__main__":

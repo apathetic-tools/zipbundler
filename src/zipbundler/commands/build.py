@@ -131,7 +131,7 @@ def _resolve_packages(packages: list[str], cwd: Path) -> list[Path]:
     return all_packages
 
 
-def _extract_entry_point_code(entry_point: str) -> str:
+def extract_entry_point_code(entry_point: str) -> str:
     """Extract entry point code from entry point string.
 
     Args:
@@ -230,7 +230,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         entry_point_str: str | None = config.get("entry_point")
         entry_point_code: str | None = None
         if entry_point_str:
-            entry_point_code = _extract_entry_point_code(entry_point_str)
+            entry_point_code = extract_entry_point_code(entry_point_str)
 
         # Extract exclude patterns
         exclude: list[str] | None = config.get("exclude")
@@ -304,7 +304,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         if hasattr(args, "output") and args.output:
             output = Path(args.output).resolve()
         if hasattr(args, "entry_point") and args.entry_point:
-            entry_point_code = _extract_entry_point_code(args.entry_point)
+            entry_point_code = extract_entry_point_code(args.entry_point)
         if hasattr(args, "shebang"):
             # Handle --no-shebang (False) or --python/-p (string)
             if args.shebang is False:

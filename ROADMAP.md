@@ -18,7 +18,6 @@ Some of these we just want to consider, and may not want to implement.
   - `-o, --output`: Output file path
   - `-p, --python`: Shebang line (interpreter path)
   - `-m, --main`: Main entry point (module:function or module)
-  - Support reading existing `.pyz` archives as SOURCE
 - **Basic CLI**: Simple command-line interface for bundling
 
 ### Phase 2: Configuration System

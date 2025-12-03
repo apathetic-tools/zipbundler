@@ -2,6 +2,7 @@
 """Core build functionality for creating zipapp bundles."""
 
 import stat
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -282,6 +283,72 @@ def list_files(
         return []
 
     return files_to_include
+
+
+def extract_archive_to_tempdir(archive: Path | str) -> Path:
+    """Extract a zipapp archive to a temporary directory.
+
+    This function extracts all files from a .pyz archive (skipping the shebang)
+    to a temporary directory, which can then be used as a source for building.
+
+    Args:
+        archive: Path to the zipapp archive (.pyz file)
+
+    Returns:
+        Path to the temporary directory containing extracted files
+
+    Raises:
+        FileNotFoundError: If the archive file does not exist
+        ValueError: If the archive is not a valid zip file
+        zipfile.BadZipFile: If the archive is corrupted
+    """
+    logger = getAppLogger()
+    archive_path = Path(archive).resolve()
+
+    if not archive_path.exists():
+        msg = f"Archive not found: {archive_path}"
+        raise FileNotFoundError(msg)
+
+    if not archive_path.is_file():
+        msg = f"Archive path is not a file: {archive_path}"
+        raise ValueError(msg)
+
+    # Create temporary directory
+    temp_dir = Path(tempfile.mkdtemp(prefix="zipbundler_extract_"))
+    logger.debug(
+        "Extracting archive %s to temporary directory: %s", archive_path, temp_dir
+    )
+
+    # Read the archive, skipping shebang if present
+    with archive_path.open("rb") as f:
+        # Check for shebang (first 2 bytes are #!)
+        first_two = f.read(2)
+        if first_two == b"#!":
+            # Skip shebang line
+            f.readline()
+        else:
+            # No shebang, rewind to start
+            f.seek(0)
+
+        # Read remaining data (the zip file)
+        zip_data = f.read()
+
+    # Write zip data to temporary file
+    temp_zip = temp_dir / "archive.zip"
+    temp_zip.write_bytes(zip_data)
+
+    # Extract zip file
+    try:
+        with zipfile.ZipFile(temp_zip, "r") as zf:
+            zf.extractall(temp_dir)
+        # Remove temporary zip file
+        temp_zip.unlink()
+        logger.debug("Extracted %d files from archive", len(list(temp_dir.rglob("*"))))
+    except zipfile.BadZipFile as e:
+        msg = f"Invalid zip file in archive: {archive_path}"
+        raise ValueError(msg) from e
+
+    return temp_dir
 
 
 def get_interpreter(archive: Path | str) -> str | None:

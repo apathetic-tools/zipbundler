@@ -8,6 +8,7 @@ from .init import handle_init_command
 from .list import handle_list_command
 from .validate import handle_validate_command
 from .watch import handle_watch_command
+from .zipapp_style import handle_zipapp_style_command
 
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "handle_list_command",
     "handle_validate_command",
     "handle_watch_command",
+    "handle_zipapp_style_command",
 ]
