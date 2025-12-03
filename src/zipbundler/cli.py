@@ -4,7 +4,12 @@ import sys
 from apathetic_logging import LEVEL_ORDER
 
 from .actions import get_metadata
-from .commands import handle_info_command, handle_init_command, handle_list_command
+from .commands import (
+    handle_info_command,
+    handle_init_command,
+    handle_list_command,
+    handle_validate_command,
+)
 from .logs import getAppLogger
 from .meta import PROGRAM_DISPLAY
 
@@ -138,6 +143,50 @@ def _setup_parser() -> argparse.ArgumentParser:
         help="Set log verbosity level.",
     )
 
+    # Validate command
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help="Validate configuration file",
+    )
+    validate_parser.add_argument(
+        "-c",
+        "--config",
+        help=(
+            "Path to configuration file (default: .zipbundler.jsonc or pyproject.toml)"
+        ),
+    )
+    validate_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Fail on warnings",
+    )
+
+    # Add log level options to validate parser
+    log_level_validate = validate_parser.add_mutually_exclusive_group()
+    log_level_validate.add_argument(
+        "-q",
+        "--quiet",
+        action="store_const",
+        const="warning",
+        dest="log_level",
+        help="Suppress non-critical output (same as --log-level warning).",
+    )
+    log_level_validate.add_argument(
+        "-v",
+        "--verbose",
+        action="store_const",
+        const="debug",
+        dest="log_level",
+        help="Verbose output (same as --log-level debug).",
+    )
+    log_level_validate.add_argument(
+        "--log-level",
+        choices=LEVEL_ORDER,
+        default=None,
+        dest="log_level",
+        help="Set log verbosity level.",
+    )
+
     return parser
 
 
@@ -153,7 +202,7 @@ def main(args: list[str] | None = None) -> int:  # noqa: PLR0911
         # Extract source from args (everything that's not a flag and not a command)
         source: str | None = None
         filtered_args: list[str] = []
-        commands = {"init", "list"}
+        commands = {"init", "list", "validate"}
         for arg in args:
             if arg == "--info" or arg.startswith("-"):
                 filtered_args.append(arg)
@@ -193,6 +242,8 @@ def main(args: list[str] | None = None) -> int:  # noqa: PLR0911
         return handle_init_command(parsed_args)
     if parsed_args.command == "list":
         return handle_list_command(parsed_args)
+    if parsed_args.command == "validate":
+        return handle_validate_command(parsed_args)
 
     # No command provided and no zipapp-style usage
     if not parsed_args.source:

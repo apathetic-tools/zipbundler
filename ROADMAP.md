@@ -39,7 +39,6 @@ Some of these we just want to consider, and may not want to implement.
 ## 🧰 CLI Commands
 
 - `zipbundler build` - Build zip from current directory or config
-- `zipbundler validate` - Validate configuration file
 - `zipbundler watch` - Watch for changes and rebuild automatically
 - **zipapp-style CLI** - Support `python -m zipapp` compatible interface:
   - `zipbundler SOURCE -o OUTPUT` - Specify source and output
