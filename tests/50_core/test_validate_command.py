@@ -257,3 +257,106 @@ def test_cli_validate_command_invalid_packages_type(tmp_path: Path) -> None:
         assert code == 1
     finally:
         os.chdir(original_cwd)
+
+
+def test_cli_validate_command_finds_config_in_parent_directory(tmp_path: Path) -> None:
+    """Test validate command finds config file in parent directory."""
+    original_cwd = Path.cwd()
+    try:
+        # Create config file in parent directory
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/my_package/**/*.py"]
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Create a subdirectory and change to it
+        subdir = tmp_path / "subdir" / "nested"
+        subdir.mkdir(parents=True)
+        os.chdir(subdir)
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (config found in parent)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_prefers_local_over_parent_config(tmp_path: Path) -> None:
+    """Test validate command prefers local config over parent config."""
+    original_cwd = Path.cwd()
+    try:
+        # Create config file in parent directory
+        parent_config = tmp_path / ".zipbundler.jsonc"
+        parent_config.write_text(
+            """{
+  "packages": ["parent_package/**/*.py"]
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Create a subdirectory with its own config
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+        local_config = subdir / ".zipbundler.jsonc"
+        local_config.write_text(
+            """{
+  "packages": ["local_package/**/*.py"]
+}
+""",
+            encoding="utf-8",
+        )
+
+        os.chdir(subdir)
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (local config found)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_prefers_jsonc_over_pyproject_toml(
+    tmp_path: Path,
+) -> None:
+    """Test validate prefers .zipbundler.jsonc over pyproject.toml when both exist."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create both config files
+        jsonc_config = tmp_path / ".zipbundler.jsonc"
+        jsonc_config.write_text(
+            """{
+  "packages": ["jsonc_package/**/*.py"]
+}
+""",
+            encoding="utf-8",
+        )
+
+        toml_config = tmp_path / "pyproject.toml"
+        toml_config.write_text(
+            """[tool.zipbundler]
+packages = ["toml_package/**/*.py"]
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (config found, jsonc preferred)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)

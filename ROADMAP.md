@@ -22,7 +22,7 @@ Some of these we just want to consider, and may not want to implement.
 - **Basic CLI**: Simple command-line interface for bundling
 
 ### Phase 2: Configuration System
-- **Config File Support**: `.zipbundler.jsonc` or `pyproject.toml` integration
+- **Config File Support**: `.zipbundler.jsonc` or `pyproject.toml` integration (searches current directory and parent directories)
 - **Package Selection**: Configure which packages to include
 - **Output Path**: Configurable output directory and filename
 - **Entry Point Configuration**: Define entry points in config file

@@ -18,8 +18,11 @@ def find_config(config_path: str | None, cwd: Path) -> Path | None:
 
     Search order:
       1. Explicit path from CLI (--config)
-      2. .zipbundler.jsonc in current directory
-      3. pyproject.toml in current directory
+      2. Default candidate files in current directory and parent directories:
+         - .zipbundler.jsonc
+         - pyproject.toml
+         Searches from cwd up to filesystem root, returning first match
+         (closest to cwd).
 
     Returns the first matching path, or None if no config was found.
     """
@@ -37,18 +40,46 @@ def find_config(config_path: str | None, cwd: Path) -> Path | None:
             raise ValueError(msg)
         return config
 
-    # --- 2. Default candidate files ---
-    candidates = [
-        cwd / ".zipbundler.jsonc",
-        cwd / "pyproject.toml",
+    # --- 2. Default candidate files (search current dir and parents) ---
+    # Search from cwd up to filesystem root, returning first match (closest to cwd)
+    current = cwd
+    candidate_names = [
+        ".zipbundler.jsonc",
+        "pyproject.toml",
     ]
+    found: list[Path] = []
+    while True:
+        for name in candidate_names:
+            candidate = current / name
+            if candidate.exists():
+                found.append(candidate)
+        if found:
+            # Found at least one config file at this level
+            break
+        parent = current.parent
+        if parent == current:  # Reached filesystem root
+            break
+        current = parent
 
-    for candidate in candidates:
-        if candidate.exists():
-            logger.trace(f"[find_config] Found config: {candidate}")
-            return candidate
+    if not found:
+        return None
 
-    return None
+    # --- 3. Handle multiple matches at same level ---
+    # Prefer .zipbundler.jsonc > pyproject.toml
+    if len(found) > 1:
+        # Prefer .zipbundler.jsonc, then pyproject.toml
+        # Use name-based priority since .zipbundler.jsonc has no suffix
+        priority = {".zipbundler.jsonc": 0, "pyproject.toml": 1}
+        found_sorted = sorted(found, key=lambda p: priority.get(p.name, 99))
+        names = ", ".join(p.name for p in found_sorted)
+        logger.warning(
+            "Multiple config files detected (%s); using %s.",
+            names,
+            found_sorted[0].name,
+        )
+        return found_sorted[0]
+    logger.trace(f"[find_config] Found config: {found[0]}")
+    return found[0]
 
 
 def _load_jsonc_config(config_path: Path) -> dict[str, Any]:
