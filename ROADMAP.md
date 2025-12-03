@@ -19,7 +19,6 @@ Some of these we just want to consider, and may not want to implement.
   - `-p, --python`: Shebang line (interpreter path)
   - `-m, --main`: Main entry point (module:function or module)
   - `-c, --compress`: Enable compression (deflate method)
-  - `--info`: Display interpreter from existing archive
   - Support reading existing `.pyz` archives as SOURCE
 - **Basic CLI**: Simple command-line interface for bundling
 

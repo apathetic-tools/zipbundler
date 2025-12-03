@@ -2,11 +2,11 @@ import argparse
 import sys
 from pathlib import Path
 
-from .build import build_zipapp
+from .build import build_zipapp, get_interpreter
 from .logs import getAppLogger
 
 
-def main(args: list[str] | None = None) -> int:
+def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915
     """Main entry point for the zipbundler CLI."""
     logger = getAppLogger()
     parser = argparse.ArgumentParser(
@@ -15,14 +15,21 @@ def main(args: list[str] | None = None) -> int:
 
     parser.add_argument(
         "source",
-        nargs="+",
-        help="Source package directories to include in the zip",
+        nargs="*",
+        help=(
+            "Source package directories to include in the zip "
+            "(or existing .pyz archive for --info)"
+        ),
     )
     parser.add_argument(
         "-o",
         "--output",
-        required=True,
         help="Output file path for the zipapp (.pyz extension recommended)",
+    )
+    parser.add_argument(
+        "--info",
+        action="store_true",
+        help="Display the interpreter from an existing archive",
     )
     parser.add_argument(
         "-m",
@@ -42,6 +49,39 @@ def main(args: list[str] | None = None) -> int:
     )
 
     parsed_args = parser.parse_args(args)
+
+    # Handle --info flag
+    if parsed_args.info:
+        if not parsed_args.source:
+            parser.error("--info requires a source archive file")
+        if len(parsed_args.source) > 1:
+            parser.error("--info requires exactly one source archive file")
+        if parsed_args.output:
+            parser.error("--info does not accept --output")
+
+        try:
+            archive = Path(parsed_args.source[0])
+            interpreter = get_interpreter(archive)
+            if interpreter is None:
+                sys.stdout.write("No interpreter specified in archive\n")
+                return 1
+            sys.stdout.write(f"{interpreter}\n")
+            return 0
+        except (FileNotFoundError, ValueError) as e:
+            logger.errorIfNotDebug(str(e))
+            return 1
+        except Exception as e:  # noqa: BLE001
+            logger.criticalIfNotDebug("Unexpected error: %s", e)
+            return 1
+        else:
+            sys.stdout.write(f"{interpreter}\n")
+            return 0
+
+    # Normal build mode
+    if not parsed_args.source:
+        parser.error("source is required when not using --info")
+    if not parsed_args.output:
+        parser.error("--output is required when not using --info")
 
     # Convert entry point format
     entry_point: str | None = None

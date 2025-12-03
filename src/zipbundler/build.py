@@ -65,3 +65,39 @@ def build_zipapp(
     output.chmod(output.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
     logger.info("Created zipapp: %s", output)
+
+
+def get_interpreter(archive: Path | str) -> str | None:
+    """Get the interpreter from an existing zipapp archive.
+
+    This function is compatible with Python's zipapp.get_interpreter().
+
+    Args:
+        archive: Path to the zipapp archive (.pyz file)
+
+    Returns:
+        The interpreter string (shebang line without #!), or None if no
+        shebang is present
+
+    Raises:
+        FileNotFoundError: If the archive file does not exist
+        ValueError: If the archive is not a valid zipapp file
+    """
+    archive_path = Path(archive)
+    if not archive_path.exists():
+        msg = f"Archive not found: {archive_path}"
+        raise FileNotFoundError(msg)
+
+    # Read first 2 bytes to check for shebang
+    with archive_path.open("rb") as f:
+        if f.read(2) != b"#!":
+            return None
+
+        # Read the rest of the shebang line
+        # Use 'utf-8' encoding with error handling, matching zipapp behavior
+        line = f.readline().strip()
+        try:
+            return line.decode("utf-8")
+        except UnicodeDecodeError:
+            # Fallback to latin-1 if utf-8 fails (matches zipapp behavior)
+            return line.decode("latin-1")
