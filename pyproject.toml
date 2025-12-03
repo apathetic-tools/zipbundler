@@ -136,7 +136,7 @@ fix = ["sync:ai:guidance", "fix:ruff:installed", "fix:format:installed"]
 "sync:ai:guidance" = "python -m sync_ai_guidance --quiet"
 # this creates the singlefile script from the module, it need to use serger not zipbundler to do that
 "build:script" = "python -m serger"
-"build:zipapp" = "python -m zipbundler -c zipbundler -o dist/zipbundler.pyz . --quiet"
+"build:zipapp" = "python -m zipbundler -m zipbundler.__main__:main -c -o dist/zipbundler.pyz . --quiet"
 
 # 🚀 Release management (semantic-release)
 "release:version" = "semantic-release version --noop"
