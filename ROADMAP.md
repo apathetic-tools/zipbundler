@@ -40,7 +40,6 @@ Some of these we just want to consider, and may not want to implement.
 
 - `zipbundler build` - Build zip from current directory or config
 - `zipbundler init` - Create a default `.zipbundler.jsonc` config file
-- `zipbundler list` - List packages that would be included
 - `zipbundler validate` - Validate configuration file
 - `zipbundler watch` - Watch for changes and rebuild automatically
 - **zipapp-style CLI** - Support `python -m zipapp` compatible interface:

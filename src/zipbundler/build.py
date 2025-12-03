@@ -101,6 +101,49 @@ def build_zipapp(
     logger.info("Created zipapp: %s", output)
 
 
+def list_files(
+    packages: list[Path],
+    *,
+    count: bool = False,
+) -> list[tuple[Path, Path]]:
+    """List files that would be included in a zipapp bundle.
+
+    Args:
+        packages: List of package directories to scan
+        tree: If True, return files organized for tree display
+        count: If True, only return count (empty list, count in logger)
+
+    Returns:
+        List of tuples (file_path, arcname) for files that would be included
+    """
+    logger = getAppLogger()
+
+    if not packages:
+        xmsg = "At least one package must be provided"
+        raise ValueError(xmsg)
+
+    files_to_include: list[tuple[Path, Path]] = []
+
+    # Add all Python files from packages
+    for pkg in packages:
+        pkg_path = Path(pkg).resolve()
+        if not pkg_path.exists():
+            logger.warning("Package path does not exist: %s", pkg_path)
+            continue
+
+        for f in pkg_path.rglob("*.py"):
+            # Calculate relative path from package parent
+            arcname = f.relative_to(pkg_path.parent)
+            files_to_include.append((f, arcname))
+            logger.trace("Found file: %s -> %s", f, arcname)
+
+    if count:
+        logger.info("Files: %d", len(files_to_include))
+        return []
+
+    return files_to_include
+
+
 def get_interpreter(archive: Path | str) -> str | None:
     """Get the interpreter from an existing zipapp archive.
 

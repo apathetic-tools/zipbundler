@@ -1,69 +1,109 @@
 import argparse
 import sys
 from pathlib import Path
+from typing import Any
 
 from apathetic_logging import LEVEL_ORDER
 
-from .build import build_zipapp, get_interpreter
+from .build import list_files
 from .logs import getAppLogger
 
 
-def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915
+def _handle_list_command(args: argparse.Namespace) -> int:
+    """Handle the list subcommand."""
+    logger = getAppLogger()
+
+    if not args.source:
+        logger.error("source is required for list command")
+        return 1
+
+    try:
+        packages = [Path(p) for p in args.source]
+        files = list_files(packages, count=args.count)
+
+        if args.count:
+            # Count already printed by list_files
+            result = 0
+        elif args.tree:
+            # Build a tree structure
+            tree: dict[str, Any] = {}
+            for _file_path, arcname in files:
+                parts = arcname.parts
+                current: dict[str, Any] = tree
+                for part in parts[:-1]:
+                    if part not in current:
+                        current[part] = {}
+                    current = current[part]
+                # Add file
+                if parts and parts[-1] not in current:
+                    current[parts[-1]] = None
+
+            def print_tree(
+                node: dict[str, Any],
+                prefix: str = "",
+            ) -> None:
+                """Print tree structure recursively."""
+                items = sorted(node.items())
+                for i, (name, children) in enumerate(items):
+                    is_last_item = i == len(items) - 1
+                    connector = "└── " if is_last_item else "├── "
+                    sys.stdout.write(f"{prefix}{connector}{name}\n")
+                    if children is not None:
+                        extension = "    " if is_last_item else "│   "
+                        print_tree(children, prefix + extension)
+
+            print_tree(tree)
+            result = 0
+        else:
+            # Simple list
+            for _file_path, arcname in files:
+                sys.stdout.write(f"{arcname}\n")
+            result = 0
+    except (ValueError, FileNotFoundError) as e:
+        logger.errorIfNotDebug(str(e))
+        result = 1
+    except Exception as e:  # noqa: BLE001
+        logger.criticalIfNotDebug("Unexpected error: %s", e)
+        result = 1
+
+    return result
+
+
+def main(args: list[str] | None = None) -> int:
     """Main entry point for the zipbundler CLI."""
     logger = getAppLogger()
+
     parser = argparse.ArgumentParser(
         description="Bundle your packages into a runnable, importable zip"
     )
+    subparsers = parser.add_subparsers(
+        dest="command", help="Command to run", required=True
+    )
 
-    parser.add_argument(
+    # List command
+    list_parser = subparsers.add_parser(
+        "list",
+        help="List packages and files that would be included in the bundle",
+    )
+    list_parser.add_argument(
         "source",
-        nargs="*",
-        help=(
-            "Source package directories to include in the zip "
-            "(or existing .pyz archive for --info)"
-        ),
+        nargs="+",
+        help="Source package directories to list",
     )
-    parser.add_argument(
-        "-o",
-        "--output",
-        help="Output file path for the zipapp (.pyz extension recommended)",
-    )
-    parser.add_argument(
-        "--info",
+    list_parser.add_argument(
+        "--tree",
         action="store_true",
-        help="Display the interpreter from an existing archive",
+        help="Show as directory tree",
     )
-    parser.add_argument(
-        "-m",
-        "--main",
-        dest="entry_point",
-        help=(
-            "Entry point for the zipapp. Can be a module:function "
-            "(e.g., 'mymodule:main') or a module (e.g., 'mymodule'). "
-            "If not specified, no __main__.py is created."
-        ),
-    )
-    parser.add_argument(
-        "-p",
-        "--python",
-        default="#!/usr/bin/env python3",
-        help="Shebang line (default: '#!/usr/bin/env python3')",
-    )
-    parser.add_argument(
-        "-c",
-        "--compress",
+    list_parser.add_argument(
+        "--count",
         action="store_true",
-        help="Enable compression (deflate method)",
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Preview what would be bundled without creating zip",
+        help="Show file count only",
     )
 
-    # --- Version and verbosity ---
-    log_level = parser.add_mutually_exclusive_group()
-    log_level.add_argument(
+    # Add log level options to list parser
+    log_level_list = list_parser.add_mutually_exclusive_group()
+    log_level_list.add_argument(
         "-q",
         "--quiet",
         action="store_const",
@@ -71,7 +111,7 @@ def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
         dest="log_level",
         help="Suppress non-critical output (same as --log-level warning).",
     )
-    log_level.add_argument(
+    log_level_list.add_argument(
         "-v",
         "--verbose",
         action="store_const",
@@ -79,7 +119,7 @@ def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
         dest="log_level",
         help="Verbose output (same as --log-level debug).",
     )
-    log_level.add_argument(
+    log_level_list.add_argument(
         "--log-level",
         choices=LEVEL_ORDER,
         default=None,
@@ -93,71 +133,12 @@ def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
     resolved_log_level = logger.determineLogLevel(args=parsed_args)
     logger.setLevel(resolved_log_level)
 
-    # Handle --info flag
-    if parsed_args.info:
-        if not parsed_args.source:
-            parser.error("--info requires a source archive file")
-        if len(parsed_args.source) > 1:
-            parser.error("--info requires exactly one source archive file")
-        if parsed_args.output:
-            parser.error("--info does not accept --output")
+    if parsed_args.command == "list":
+        return _handle_list_command(parsed_args)
 
-        try:
-            archive = Path(parsed_args.source[0])
-            interpreter = get_interpreter(archive)
-            if interpreter is None:
-                sys.stdout.write("No interpreter specified in archive\n")
-                return 1
-            sys.stdout.write(f"{interpreter}\n")
-            return 0
-        except (FileNotFoundError, ValueError) as e:
-            logger.errorIfNotDebug(str(e))
-            return 1
-        except Exception as e:  # noqa: BLE001
-            logger.criticalIfNotDebug("Unexpected error: %s", e)
-            return 1
-        else:
-            sys.stdout.write(f"{interpreter}\n")
-            return 0
-
-    # Normal build mode
-    if not parsed_args.source:
-        parser.error("source is required when not using --info")
-    if not parsed_args.output and not parsed_args.dry_run:
-        parser.error("--output is required when not using --info or --dry-run")
-
-    # Convert entry point format
-    entry_point: str | None = None
-    if parsed_args.entry_point:
-        if ":" in parsed_args.entry_point:
-            # Format: module:function -> from module import function; function()
-            module, function = parsed_args.entry_point.split(":", 1)
-            entry_point = f"from {module} import {function}; {function}()"
-        else:
-            # Format: module -> import module; module.main()
-            module = parsed_args.entry_point
-            entry_point = f"import {module}; {module}.main()"
-
-    try:
-        packages = [Path(p) for p in parsed_args.source]
-        output = Path(parsed_args.output) if parsed_args.output else Path("dummy.pyz")
-
-        build_zipapp(
-            output=output,
-            packages=packages,
-            entry_point=entry_point,
-            shebang=parsed_args.python,
-            compress=parsed_args.compress,
-            dry_run=parsed_args.dry_run,
-        )
-    except (ValueError, FileNotFoundError) as e:
-        logger.errorIfNotDebug(str(e))
-        return 1
-    except Exception as e:  # noqa: BLE001
-        logger.criticalIfNotDebug("Unexpected error: %s", e)
-        return 1
-    else:
-        return 0
+    # This should never be reached due to required=True on subparsers
+    parser.error("Unknown command")  # pragma: no cover
+    return 1  # pragma: no cover
 
 
 if __name__ == "__main__":
