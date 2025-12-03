@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 import zipbundler.build as mod_build
-import zipbundler.main as mod_main
+import zipbundler.cli as mod_main
 
 
 EXPECTED_FILE_COUNT_BASIC = 2

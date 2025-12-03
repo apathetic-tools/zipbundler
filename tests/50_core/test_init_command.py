@@ -4,7 +4,7 @@
 import os
 from pathlib import Path
 
-import zipbundler.main as mod_main
+import zipbundler.cli as mod_main
 
 
 def test_cli_init_command_creates_file(tmp_path: Path) -> None:
