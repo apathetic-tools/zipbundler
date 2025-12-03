@@ -1,15 +1,16 @@
 # src/zipbundler/actions.py
 
 import re
-import subprocess
 import time
 from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
 
+from apathetic_utils import detect_runtime_mode, load_toml, run_with_output
+
 from .constants import DEFAULT_WATCH_INTERVAL
 from .logs import getAppLogger
-from .meta import Metadata
+from .meta import PROGRAM_PACKAGE, Metadata
 
 
 def _get_metadata_from_header(script_path: Path) -> tuple[str, str]:
@@ -57,7 +58,8 @@ def get_metadata() -> Metadata:
     logger.trace("get_metadata ran from:", Path(__file__).resolve())
 
     # --- Heuristic: standalone script lives outside `src/` ---
-    if globals().get("__STANDALONE__", False):
+    runtime_mode = detect_runtime_mode(PROGRAM_PACKAGE)
+    if runtime_mode == "standalone":
         version, commit = _get_metadata_from_header(script_path)
         logger.trace(f"got standalone version {version} with commit {commit}")
         return Metadata(version, commit)
@@ -73,22 +75,35 @@ def get_metadata() -> Metadata:
     pyproject = root / "pyproject.toml"
     if pyproject.exists():
         logger.trace(f"trying to read metadata from {pyproject}")
-        text = pyproject.read_text()
-        match = re.search(r'(?m)^\s*version\s*=\s*["\']([^"\']+)["\']', text)
-        if match:
-            version = match.group(1)
+        with suppress(Exception):
+            data = load_toml(pyproject)
+            if isinstance(data, dict):
+                # Try project.version first (PEP 621)
+                project_raw = data.get("project")
+                if isinstance(project_raw, dict):
+                    version_from_project = project_raw.get("version")  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+                    if isinstance(version_from_project, str):
+                        version = version_from_project
+                # Fallback to tool.poetry.version or [tool.zipbundler] version
+                if version == "unknown":
+                    tool_raw = data.get("tool")
+                    if isinstance(tool_raw, dict):
+                        poetry_raw = tool_raw.get("poetry")  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+                        if isinstance(poetry_raw, dict):
+                            version_from_poetry = poetry_raw.get("version")  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+                            if isinstance(version_from_poetry, str):
+                                version = version_from_poetry
 
     # Try git for commit
     with suppress(Exception):
         logger.trace("trying to get commit from git")
-        result = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607
+        result = run_with_output(
+            ["git", "rev-parse", "--short", "HEAD"],
             cwd=root,
-            capture_output=True,
-            text=True,
             check=True,
         )
-        commit = result.stdout.strip()
+        if result.stdout:
+            commit = result.stdout.strip()
 
     logger.trace(f"got package version {version} with commit {commit}")
     return Metadata(version, commit)

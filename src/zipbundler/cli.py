@@ -2,6 +2,7 @@ import argparse
 import sys
 
 from apathetic_logging import LEVEL_ORDER
+from apathetic_utils import detect_runtime_mode
 
 from .actions import get_metadata
 from .commands import (
@@ -12,7 +13,7 @@ from .commands import (
     handle_watch_command,
 )
 from .logs import getAppLogger
-from .meta import PROGRAM_DISPLAY
+from .meta import PROGRAM_DISPLAY, PROGRAM_PACKAGE
 
 
 def _handle_early_exits(args: argparse.Namespace) -> int | None:
@@ -26,7 +27,8 @@ def _handle_early_exits(args: argparse.Namespace) -> int | None:
     # --- Version flag ---
     if getattr(args, "version", None):
         meta = get_metadata()
-        standalone = " [standalone]" if globals().get("__STANDALONE__", False) else ""
+        runtime_mode = detect_runtime_mode(PROGRAM_PACKAGE)
+        standalone = " [standalone]" if runtime_mode == "standalone" else ""
         logger.info(
             "%s %s (%s)%s", PROGRAM_DISPLAY, meta.version, meta.commit, standalone
         )
