@@ -4,7 +4,7 @@ import sys
 from apathetic_logging import LEVEL_ORDER
 
 from .actions import get_metadata
-from .commands import handle_init_command, handle_list_command
+from .commands import handle_info_command, handle_init_command, handle_list_command
 from .logs import getAppLogger
 from .meta import PROGRAM_DISPLAY
 
@@ -37,6 +37,13 @@ def _setup_parser() -> argparse.ArgumentParser:
 
     # --- Version and verbosity (before subparsers) ---
     parser.add_argument("--version", action="store_true", help="Show version info.")
+
+    # --- zipapp-style --info flag ---
+    parser.add_argument(
+        "--info",
+        action="store_true",
+        help="Display the interpreter from an existing archive",
+    )
 
     subparsers = parser.add_subparsers(
         dest="command", help="Command to run", required=False
@@ -134,11 +141,42 @@ def _setup_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(args: list[str] | None = None) -> int:
+def main(args: list[str] | None = None) -> int:  # noqa: PLR0911
     """Main entry point for the zipbundler CLI."""
     logger = getAppLogger()
 
     parser = _setup_parser()
+
+    # --- Handle --info flag early (before subcommand parsing) ---
+    # This avoids conflicts with subcommand parsing
+    if args and "--info" in args:
+        # Extract source from args (everything that's not a flag and not a command)
+        source: str | None = None
+        filtered_args: list[str] = []
+        commands = {"init", "list"}
+        for arg in args:
+            if arg == "--info" or arg.startswith("-"):
+                filtered_args.append(arg)
+            elif arg not in commands:
+                # This is likely the source path
+                if source is None:
+                    source = arg
+                # Don't add it to filtered_args to avoid subcommand conflict
+            else:
+                # It's a command, don't process as --info
+                filtered_args.append(arg)
+        # Parse known args to get --info flag and other flags (without source)
+        parsed_args, _remaining = parser.parse_known_args(filtered_args)
+        # Initialize logger with CLI args
+        resolved_log_level = logger.determineLogLevel(args=parsed_args)
+        logger.setLevel(resolved_log_level)
+        # Handle early exits
+        early_exit_code = _handle_early_exits(parsed_args)
+        if early_exit_code is not None:
+            return early_exit_code
+        # Handle --info with extracted source
+        return handle_info_command(source, parser)
+
     parsed_args = parser.parse_args(args)
 
     # Initialize logger with CLI args
@@ -156,8 +194,15 @@ def main(args: list[str] | None = None) -> int:
     if parsed_args.command == "list":
         return handle_list_command(parsed_args)
 
-    # No command provided
-    parser.error("No command specified. Use --help for usage.")
+    # No command provided and no zipapp-style usage
+    if not parsed_args.source:
+        parser.error("No command specified. Use --help for usage.")
+        return 1  # pragma: no cover
+    # SOURCE provided but no --info, this would be for building (not yet implemented)
+    parser.error(
+        "Building from SOURCE is not yet implemented. "
+        "Use 'zipbundler build' or 'zipbundler list' commands."
+    )
     return 1  # pragma: no cover
 
 
