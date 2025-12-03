@@ -35,7 +35,6 @@ Some of these we just want to consider, and may not want to implement.
 - **Metadata Preservation**: Preserve package metadata and version info
 - **Compression Options**: Support different compression levels
 - **Watch Mode**: Rebuild zip on file changes
-- **Dry Run Mode**: Preview what would be bundled without creating zip
 
 ## 🧰 CLI Commands
 

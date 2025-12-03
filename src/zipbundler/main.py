@@ -55,6 +55,11 @@ def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
         action="store_true",
         help="Enable compression (deflate method)",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview what would be bundled without creating zip",
+    )
 
     # --- Version and verbosity ---
     log_level = parser.add_mutually_exclusive_group()
@@ -118,8 +123,8 @@ def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
     # Normal build mode
     if not parsed_args.source:
         parser.error("source is required when not using --info")
-    if not parsed_args.output:
-        parser.error("--output is required when not using --info")
+    if not parsed_args.output and not parsed_args.dry_run:
+        parser.error("--output is required when not using --info or --dry-run")
 
     # Convert entry point format
     entry_point: str | None = None
@@ -135,7 +140,7 @@ def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
 
     try:
         packages = [Path(p) for p in parsed_args.source]
-        output = Path(parsed_args.output)
+        output = Path(parsed_args.output) if parsed_args.output else Path("dummy.pyz")
 
         build_zipapp(
             output=output,
@@ -143,6 +148,7 @@ def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
             entry_point=entry_point,
             shebang=parsed_args.python,
             compress=parsed_args.compress,
+            dry_run=parsed_args.dry_run,
         )
     except (ValueError, FileNotFoundError) as e:
         logger.errorIfNotDebug(str(e))
