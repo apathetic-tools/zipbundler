@@ -1,6 +1,6 @@
-# Python-Apathetic-Template Documentation
+# Zipbundler Documentation
 
-This directory contains Jekyll-based documentation for the Python-Apathetic-Template project.
+This directory contains Jekyll-based documentation for the Zipbundler project.
 
 ## Building the Documentation
 
@@ -24,7 +24,7 @@ bundle install
 bundle exec jekyll serve
 ```
 
-The documentation will be available at `http://localhost:4000/python-apathetic-template/`
+The documentation will be available at `http://localhost:4000/zipbundler/`
 
 ### Build for Production
 
@@ -84,10 +84,10 @@ For local development that matches GitHub Pages:
 ```bash
 cd docs
 bundle install
-bundle exec jekyll serve --baseurl /serger
+bundle exec jekyll serve --baseurl /zipbundler
 ```
 
-The documentation will be available at `http://localhost:4000/python-apathetic-template/`
+The documentation will be available at `http://localhost:4000/zipbundler/`
 
 Note: The `github-pages` gem ensures your local environment matches GitHub Pages exactly.
 

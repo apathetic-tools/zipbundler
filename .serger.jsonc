@@ -13,7 +13,7 @@
   "repo": "https://github.com/apathetic-tools/zipbundler",
 
   // License text for stitched output
-  "license": "License: MIT-aNOAI\nFull text: https://github.com/apathetic-tools/zipbundler/blob/main/LICENSE",      
+  "license": "License: MIT-a-NOAI\nFull text: https://github.com/apathetic-tools/zipbundler/blob/main/LICENSE",      
 
   // Source modules to include in the stitch
   // These are glob patterns relative to the source directory
