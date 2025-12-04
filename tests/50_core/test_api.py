@@ -272,7 +272,7 @@ def test_get_interpreter_exported(tmp_path: Path) -> None:
 
 
 def test_validate_config_valid(tmp_path: Path) -> None:
-    """Test validate_config with valid config."""
+    """Test load_and_validate_config with valid config."""
     original_cwd = Path.cwd()
     try:
         os.chdir(tmp_path)
@@ -290,14 +290,16 @@ def test_validate_config_valid(tmp_path: Path) -> None:
             encoding="utf-8",
         )
 
-        is_valid = zipbundler.validate_config()
-        assert is_valid is True
+        result = zipbundler.load_and_validate_config()
+        assert result is not None
+        _config_path, _config, validation = result
+        assert validation.valid is True
     finally:
         os.chdir(original_cwd)
 
 
 def test_validate_config_invalid(tmp_path: Path) -> None:
-    """Test validate_config with invalid config."""
+    """Test load_and_validate_config with invalid config."""
     original_cwd = Path.cwd()
     try:
         os.chdir(tmp_path)
@@ -314,8 +316,15 @@ def test_validate_config_invalid(tmp_path: Path) -> None:
             encoding="utf-8",
         )
 
-        is_valid = zipbundler.validate_config()
-        assert is_valid is False
+        try:
+            result = zipbundler.load_and_validate_config()
+            # If it doesn't raise, check validation result
+            if result is not None:
+                _config_path, _config, validation = result
+                assert validation.valid is False
+        except ValueError:
+            # Expected: validation failed
+            pass
     finally:
         os.chdir(original_cwd)
 

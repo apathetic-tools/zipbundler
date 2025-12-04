@@ -416,8 +416,8 @@ def test_cli_validate_command_invalid_output_name_type(tmp_path: Path) -> None:
         main_func = mod_main if callable(mod_main) else mod_main.main
         code = main_func(["--validate"])
 
-        # Verify exit code is 0 (warning, not error)
-        assert code == 0
+        # Verify exit code is 1 (schema validation treats type mismatches as errors)
+        assert code == 1
     finally:
         os.chdir(original_cwd)
 
@@ -591,8 +591,8 @@ def test_cli_validate_command_invalid_shebang_empty_string(tmp_path: Path) -> No
         main_func = mod_main if callable(mod_main) else mod_main.main
         code = main_func(["--validate"])
 
-        # Verify exit code is 0 (warning, not error)
-        assert code == 0
+        # Verify exit code is 1 (schema validation treats type mismatches as errors)
+        assert code == 1
     finally:
         os.chdir(original_cwd)
 
@@ -620,8 +620,8 @@ def test_cli_validate_command_invalid_shebang_type(tmp_path: Path) -> None:
         main_func = mod_main if callable(mod_main) else mod_main.main
         code = main_func(["--validate"])
 
-        # Verify exit code is 0 (warning, not error)
-        assert code == 0
+        # Verify exit code is 1 (schema validation treats type mismatches as errors)
+        assert code == 1
     finally:
         os.chdir(original_cwd)
 

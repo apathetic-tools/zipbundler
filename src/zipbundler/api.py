@@ -14,13 +14,11 @@ from apathetic_utils import find_all_packages_under_path, has_glob_chars
 from .actions import watch_for_changes
 from .build import build_zipapp, extract_archive_to_tempdir, list_files
 from .commands.build import extract_entry_point_code
-from .commands.validate import (
-    find_config,
-    load_config,
-    resolve_output_path_from_config,
-    validate_config_structure,
-)
+from .commands.validate import resolve_output_path_from_config
 from .commands.zipapp_style import is_archive_file
+from .config import (
+    load_and_validate_config,
+)
 from .constants import DEFAULT_WATCH_INTERVAL
 from .logs import getAppLogger
 
@@ -257,7 +255,6 @@ def build_zip(  # noqa: C901, PLR0912, PLR0913, PLR0915
         ValueError: Invalid arguments or configuration
         FileNotFoundError: Config file not found
     """
-    logger = getAppLogger()
     start_time = time.time()
 
     if cwd is None:
@@ -266,23 +263,21 @@ def build_zip(  # noqa: C901, PLR0912, PLR0913, PLR0915
     # Load config if provided
     config: dict[str, Any] | None = None
     if config_path:
-        config_file = find_config(str(config_path), cwd)
-        if not config_file:
+        result = load_and_validate_config(
+            config_path=str(config_path),
+            cwd=cwd,
+            strict=False,
+        )
+        if result is None:
             msg = f"Configuration file not found: {config_path}"
             raise FileNotFoundError(msg)
-        config = load_config(config_file)
-
-        # Validate config structure
-        is_valid, errors, warnings = validate_config_structure(
-            config, cwd, strict=False
-        )
-        if not is_valid:
-            error_msg = "; ".join(errors)
+        _config_file, root_config, validation = result
+        # root_config is RootConfig (TypedDict), treat as dict for compatibility
+        config = root_config  # type: ignore[assignment]
+        if not validation.valid:
+            error_msg = "; ".join(validation.errors + validation.strict_warnings)
             msg = f"Configuration validation failed: {error_msg}"
             raise ValueError(msg)
-        if warnings:
-            for warning in warnings:
-                logger.warning("Config warning: %s", warning)
 
     # Merge config with parameters (parameters override config)
     if config:
@@ -398,7 +393,7 @@ def build_zip(  # noqa: C901, PLR0912, PLR0913, PLR0915
     )
 
 
-def watch(
+def watch(  # noqa: PLR0912
     config_path: str | Path | None = None,
     *,
     packages: list[str] | None = None,
@@ -431,11 +426,19 @@ def watch(
     # Build initial configuration
     # We need to resolve packages and output_path for watch_for_changes
     if config_path:
-        config_file = find_config(str(config_path), cwd)
-        if not config_file:
+        result = load_and_validate_config(
+            config_path=str(config_path),
+            cwd=cwd,
+            strict=False,
+        )
+        if result is None:
             msg = f"Configuration file not found: {config_path}"
             raise FileNotFoundError(msg)
-        config = load_config(config_file)
+        _config_file, config, validation = result
+        if not validation.valid:
+            error_msg = "; ".join(validation.errors + validation.strict_warnings)
+            msg = f"Configuration validation failed: {error_msg}"
+            raise ValueError(msg)
 
         # Extract packages and output from config
         if packages is None:
@@ -443,7 +446,8 @@ def watch(
         if exclude is None:
             exclude = config.get("exclude")
         if output_path is None:
-            output_config: dict[str, Any] | None = config.get("output")
+            output_config_raw = config.get("output")
+            output_config: dict[str, Any] | None = output_config_raw  # type: ignore[assignment]
             output_path = resolve_output_path_from_config(output_config)
 
     if not packages:

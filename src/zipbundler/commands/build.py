@@ -6,16 +6,16 @@ import argparse
 import importlib.util
 from importlib.metadata import distributions as _distributions
 from pathlib import Path
-from typing import Any
 
 from apathetic_utils import has_glob_chars
 
 from zipbundler.build import build_zipapp
-from zipbundler.commands.validate import (
-    find_config,
-    load_config,
-    resolve_output_path_from_config,
-    validate_config_structure,
+from zipbundler.commands.validate import resolve_output_path_from_config
+from zipbundler.config import (
+    MetadataConfig,
+    OptionsConfig,
+    OutputConfig,
+    load_and_validate_config,
 )
 from zipbundler.logs import getAppLogger
 
@@ -264,47 +264,29 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
     logger = getAppLogger()
 
     cwd = Path.cwd().resolve()
-    config_path = find_config(getattr(args, "config", None), cwd)
-
-    if not config_path:
-        msg = (
-            "No configuration file found. "
-            "Looking for .zipbundler.py, .zipbundler.jsonc, or pyproject.toml. "
-            "Use 'zipbundler init' to create a config file."
-        )
-        logger.error(msg)
-        return 1
+    config_path_str = getattr(args, "config", None)
+    strict = getattr(args, "strict", False)
 
     try:
-        logger.debug("Loading configuration from: %s", config_path)
-        config = load_config(config_path)
-
-        # Validate config structure
-        strict = getattr(args, "strict", False)
-        is_valid, errors, warnings = validate_config_structure(
-            config, cwd, strict=strict
+        result = load_and_validate_config(
+            config_path=config_path_str,
+            cwd=cwd,
+            strict=strict,
         )
 
-        if not is_valid:
-            if errors:
-                logger.error(
-                    "Configuration validation failed with %d error(s):", len(errors)
-                )
-                for error in errors:
-                    logger.error("  • %s", error)
-            if warnings and strict:
-                logger.error(
-                    "Configuration validation failed with %d warning(s) (strict mode):",
-                    len(warnings),
-                )
-                for warning in warnings:
-                    logger.error("  • %s", warning)
+        if result is None:
+            msg = (
+                "No configuration file found. "
+                "Looking for .zipbundler.py, .zipbundler.jsonc, or pyproject.toml. "
+                "Use 'zipbundler init' to create a config file."
+            )
+            logger.error(msg)
             return 1
 
-        if warnings:
-            logger.warning("Configuration has %d warning(s):", len(warnings))
-            for warning in warnings:
-                logger.warning("  • %s", warning)
+        config_path, config, validation = result
+
+        if not validation.valid:
+            return 1
 
         # Extract packages
         packages_list: list[str] = config.get("packages", [])
@@ -323,8 +305,10 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             return 1
 
         # Extract output path
-        output_config: dict[str, Any] | None = config.get("output")
-        output_path = resolve_output_path_from_config(output_config)
+        output_config: OutputConfig | None = config.get("output")
+        output_path = resolve_output_path_from_config(
+            output_config  # type: ignore[arg-type]
+        )
         logger.debug(
             "Resolved output path from config: %s",
             output_path,
@@ -344,7 +328,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             exclude = None
 
         # Extract metadata
-        metadata_config: dict[str, Any] | None = config.get("metadata")
+        metadata_config: MetadataConfig | None = config.get("metadata")
         metadata: dict[str, str] | None = None
         if metadata_config:
             if not isinstance(metadata_config, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
@@ -360,7 +344,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                         logger.warning("metadata.%s must be a string, ignoring", key)
 
         # Extract options
-        options: dict[str, Any] | None = config.get("options")
+        options: OptionsConfig | None = config.get("options")
         shebang: str | None = "#!/usr/bin/env python3"
         compression: str | None = None
         compression_level: int | None = None
@@ -375,7 +359,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                         shebang = shebang_val
                     else:
                         shebang = f"#!{shebang_val}"
-                elif isinstance(shebang_val, bool) and shebang_val:
+                elif isinstance(shebang_val, bool) and shebang_val:  # pyright: ignore[reportUnnecessaryIsInstance]
                     # If shebang is just True, use default
                     pass
                 elif not shebang_val:
@@ -385,9 +369,9 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             # Compression
             compression_val = options.get("compression")
             if compression_val is not None:
-                if isinstance(compression_val, str):
+                if isinstance(compression_val, str):  # pyright: ignore[reportUnnecessaryIsInstance]
                     compression = compression_val
-                elif isinstance(compression_val, bool):
+                elif isinstance(compression_val, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
                     # Backward compatibility: True -> "deflate", False -> "stored"
                     compression = "deflate" if compression_val else "stored"
             # Default to "stored" if not specified
@@ -397,13 +381,13 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             # Compression level
             if "compression_level" in options:
                 compression_level_val = options["compression_level"]
-                if isinstance(compression_level_val, int):
+                if isinstance(compression_level_val, int):  # pyright: ignore[reportUnnecessaryIsInstance]
                     compression_level = compression_level_val
 
             # Main guard
             if "main_guard" in options:
                 main_guard_val = options["main_guard"]
-                if isinstance(main_guard_val, bool):
+                if isinstance(main_guard_val, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
                     main_guard = main_guard_val
 
         # CLI args override config
