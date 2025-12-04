@@ -316,3 +316,151 @@ def test_cli_init_command_no_metadata_when_no_pyproject(tmp_path: Path) -> None:
         assert '// "metadata":' in content or '"metadata":' not in content
     finally:
         os.chdir(original_cwd)
+
+
+def test_cli_init_command_auto_detects_entry_point_from_pyproject(
+    tmp_path: Path,
+) -> None:
+    """Test init command auto-detects entry_point from pyproject.toml."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create pyproject.toml with scripts section
+        pyproject_content = """[project]
+name = "test-package"
+
+[project.scripts]
+test-cli = "my_package.__main__:main"
+"""
+        pyproject_file = tmp_path / "pyproject.toml"
+        pyproject_file.write_text(pyproject_content, encoding="utf-8")
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["init"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify config file was created
+        config_file = tmp_path / ".zipbundler.jsonc"
+        assert config_file.exists()
+
+        # Verify entry_point was auto-detected and injected
+        content = config_file.read_text(encoding="utf-8")
+        assert '"entry_point"' in content
+        assert '"entry_point": "my_package.__main__:main"' in content
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_init_command_auto_detects_entry_point_with_module_only(
+    tmp_path: Path,
+) -> None:
+    """Test init command auto-detects entry_point with module-only format."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create pyproject.toml with scripts section (module only, no function)
+        pyproject_content = """[project]
+name = "test-package"
+
+[project.scripts]
+test-cli = "my_package"
+"""
+        pyproject_file = tmp_path / "pyproject.toml"
+        pyproject_file.write_text(pyproject_content, encoding="utf-8")
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["init"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify config file was created
+        config_file = tmp_path / ".zipbundler.jsonc"
+        assert config_file.exists()
+
+        # Verify entry_point was auto-detected and injected
+        content = config_file.read_text(encoding="utf-8")
+        assert '"entry_point"' in content
+        assert '"entry_point": "my_package"' in content
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_init_command_no_entry_point_when_no_scripts(tmp_path: Path) -> None:
+    """Test init command does not add entry_point when no scripts section exists."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create pyproject.toml without scripts section
+        pyproject_content = """[project]
+name = "test-package"
+version = "1.0.0"
+"""
+        pyproject_file = tmp_path / "pyproject.toml"
+        pyproject_file.write_text(pyproject_content, encoding="utf-8")
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["init", "--preset", "basic"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify config file was created
+        config_file = tmp_path / ".zipbundler.jsonc"
+        assert config_file.exists()
+
+        # Verify entry_point section is still commented (not auto-detected)
+        content = config_file.read_text(encoding="utf-8")
+        # For basic preset, entry_point should be commented out
+        assert '// "entry_point":' in content or '"entry_point"' not in content
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_init_command_auto_detects_both_metadata_and_entry_point(
+    tmp_path: Path,
+) -> None:
+    """Test init auto-detects both metadata and entry_point from pyproject.toml."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create pyproject.toml with both metadata and scripts
+        pyproject_content = """[project]
+name = "test-package"
+version = "1.2.3"
+description = "A test package"
+
+[project.scripts]
+test-cli = "my_package.__main__:main"
+"""
+        pyproject_file = tmp_path / "pyproject.toml"
+        pyproject_file.write_text(pyproject_content, encoding="utf-8")
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["init"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify config file was created
+        config_file = tmp_path / ".zipbundler.jsonc"
+        assert config_file.exists()
+
+        # Verify both metadata and entry_point were auto-detected
+        content = config_file.read_text(encoding="utf-8")
+        assert '"metadata"' in content
+        assert '"display_name": "test-package"' in content
+        assert '"entry_point"' in content
+        assert '"entry_point": "my_package.__main__:main"' in content
+    finally:
+        os.chdir(original_cwd)

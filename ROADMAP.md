@@ -23,7 +23,7 @@ Some of these we just want to consider, and may not want to implement.
 ### Phase 2: Configuration System
 - **Config File Support**: `.zipbundler.py`, `.zipbundler.jsonc`, or `pyproject.toml` integration (searches current directory and parent directories) ✅
 - **Output Path**: Configurable output directory and filename ✅
-- **Entry Point Configuration**: Define entry points in config file
+- **Entry Point Configuration**: Define entry points in config file ✅
 - **Metadata Auto-Detection**: `init` command auto-detects metadata from `pyproject.toml` when creating config files ✅
 
 ### Phase 3: Advanced Features
