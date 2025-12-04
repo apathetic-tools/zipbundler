@@ -243,7 +243,7 @@ def test_cli_build_command_output_name_generates_path(tmp_path: Path) -> None:
         assert code == 0
 
         # Verify zip file was created at path generated from output.name
-        output_file = tmp_path / "dist" / "my_custom_package.zip"
+        output_file = tmp_path / "dist" / "my_custom_package.pyz"
         assert output_file.exists()
 
         # Verify zip file is valid and contains expected files

@@ -329,13 +329,13 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             # Default output path
             if output_name:
                 # Use output.name to generate default path
-                output_path_str = f"dist/{output_name}.zip"
+                output_path_str = f"dist/{output_name}.pyz"
                 logger.debug(
                     "No output path specified, using output.name: %s",
                     output_path_str,
                 )
             else:
-                output_path_str = "dist/bundle.zip"
+                output_path_str = "dist/bundle.pyz"
                 logger.debug(
                     "No output path specified, using default: %s", output_path_str
                 )
