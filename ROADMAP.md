@@ -10,7 +10,7 @@ Some of these we just want to consider, and may not want to implement.
 ## 🎯 Core Features
 
 ### Phase 1: Basic Zip Bundling
-- **Package Discovery**: Automatically discover Python packages in a directory
+- **Package Discovery**: Automatically discover Python packages in a directory ✅
 - **zipapp-Compatible Zip Creation**: Create `.pyz` files compatible with Python's `zipapp` module
 - **Flat Structure**: Preserve original package paths without transformations
 - **Import Support**: Ensure zip files are importable via `zipimport` and `importlib`

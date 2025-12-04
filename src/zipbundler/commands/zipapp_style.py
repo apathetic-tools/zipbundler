@@ -7,6 +7,8 @@ import argparse
 import shutil
 from pathlib import Path
 
+from apathetic_utils import find_all_packages_under_path
+
 from zipbundler.build import build_zipapp, extract_archive_to_tempdir
 from zipbundler.commands.build import extract_entry_point_code
 from zipbundler.logs import getAppLogger
@@ -71,6 +73,7 @@ def handle_zipapp_style_command(args: argparse.Namespace) -> int:  # noqa: C901,
 
     # Check if source is an archive
     temp_dir: Path | None = None
+    packages: list[Path] = []
     if is_archive_file(source):
         logger.debug("SOURCE is an archive file, extracting to temporary directory")
         try:
@@ -81,7 +84,42 @@ def handle_zipapp_style_command(args: argparse.Namespace) -> int:  # noqa: C901,
             logger.exception("Failed to extract archive")
             return 1
     elif source.is_dir():
-        packages = [source]
+        # Check if the directory itself is a package (has __init__.py)
+        is_package = (source / "__init__.py").exists()
+        if is_package:
+            # Directory is itself a package, use it directly
+            logger.debug("SOURCE directory is a package: %s", source)
+            packages = [source]
+        else:
+            # Automatically discover Python packages in the directory
+            try:
+                found_packages = find_all_packages_under_path(source)
+                if found_packages:
+                    # Convert package names to paths
+                    for pkg_name in found_packages:
+                        pkg_path = source / pkg_name.replace(".", "/")
+                        if pkg_path.exists() and pkg_path.is_dir():
+                            packages.append(pkg_path.resolve())
+                            logger.debug("Discovered package: %s", pkg_path)
+                    if not packages:
+                        # Fallback: use the directory itself if no packages found
+                        logger.debug(
+                            "No packages discovered, using directory as package: %s",
+                            source,
+                        )
+                        packages = [source]
+                else:
+                    # No packages found, use the directory itself
+                    logger.debug(
+                        "No packages discovered, using directory as package: %s", source
+                    )
+                    packages = [source]
+            except (IndexError, ValueError):
+                # If discovery fails, fall back to using directory itself
+                logger.debug(
+                    "Package discovery failed, using directory as package: %s", source
+                )
+                packages = [source]
     else:
         logger.error("SOURCE must be a directory or .pyz archive file: %s", source)
         return 1

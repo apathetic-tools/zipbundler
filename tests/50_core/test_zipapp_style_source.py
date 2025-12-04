@@ -251,6 +251,53 @@ def test_zipapp_style_from_directory_compression_level(tmp_path: Path) -> None:
             assert info.compress_type == zipfile.ZIP_DEFLATED
 
 
+def test_zipapp_style_package_discovery(tmp_path: Path) -> None:
+    """Test zipapp-style CLI automatically discovers packages in a directory."""
+    # Create a directory with multiple packages
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+
+    # Create first package
+    pkg1_dir = src_dir / "package1"
+    pkg1_dir.mkdir()
+    (pkg1_dir / "__init__.py").write_text("")
+    (pkg1_dir / "module1.py").write_text("def func1():\n    pass\n")
+
+    # Create second package
+    pkg2_dir = src_dir / "package2"
+    pkg2_dir.mkdir()
+    (pkg2_dir / "__init__.py").write_text("")
+    (pkg2_dir / "module2.py").write_text("def func2():\n    pass\n")
+
+    # Create a non-package directory (no __init__.py)
+    non_pkg_dir = src_dir / "not_a_package"
+    non_pkg_dir.mkdir()
+    (non_pkg_dir / "script.py").write_text("def script():\n    pass\n")
+
+    output = tmp_path / "app.pyz"
+
+    # Handle both module and function cases (runtime mode swap)
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func([str(src_dir), "-o", str(output)])
+
+    # Verify exit code is 0
+    assert code == 0
+
+    # Verify output file was created
+    assert output.exists()
+
+    # Verify zip file contains files from both discovered packages
+    with zipfile.ZipFile(output, "r") as zf:
+        names = zf.namelist()
+        # Both packages should be discovered and included
+        assert any("package1/__init__.py" in name for name in names)
+        assert any("package1/module1.py" in name for name in names)
+        assert any("package2/__init__.py" in name for name in names)
+        assert any("package2/module2.py" in name for name in names)
+        # Non-package directory should not be included (no __init__.py)
+        assert not any("not_a_package" in name for name in names)
+
+
 def test_extract_archive_to_tempdir(tmp_path: Path) -> None:
     """Test extract_archive_to_tempdir function."""
     # Create a test archive
