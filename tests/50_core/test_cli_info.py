@@ -102,3 +102,89 @@ def test_cli_info_custom_shebang(tmp_path: Path) -> None:
 
     # Verify exit code is 0
     assert code == 0
+
+
+def test_cli_info_with_metadata(tmp_path: Path) -> None:
+    """Test --info displays metadata from archive with PKG-INFO."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+
+    output = tmp_path / "app.pyz"
+    metadata = {
+        "display_name": "Test Package",
+        "description": "A test package",
+        "version": "1.2.3",
+        "author": "Test Author",
+        "license": "MIT",
+    }
+
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=None,
+        shebang="#!/usr/bin/env python3",
+        metadata=metadata,
+    )
+
+    # Handle both module and function cases (runtime mode swap)
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func([str(output), "--info"])
+
+    # Verify exit code is 0
+    assert code == 0
+
+
+def test_cli_info_with_partial_metadata(tmp_path: Path) -> None:
+    """Test --info displays partial metadata from archive."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+
+    output = tmp_path / "app.pyz"
+    metadata = {
+        "display_name": "Partial Package",
+        "version": "2.0.0",
+    }
+
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=None,
+        shebang="#!/usr/bin/env python3",
+        metadata=metadata,
+    )
+
+    # Handle both module and function cases (runtime mode swap)
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func([str(output), "--info"])
+
+    # Verify exit code is 0
+    assert code == 0
+
+
+def test_cli_info_without_metadata(tmp_path: Path) -> None:
+    """Test --info works correctly when archive has no metadata."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+
+    output = tmp_path / "app.pyz"
+
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=None,
+        shebang="#!/usr/bin/env python3",
+        metadata=None,
+    )
+
+    # Handle both module and function cases (runtime mode swap)
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func([str(output), "--info"])
+
+    # Verify exit code is 0 (should still work, just no metadata displayed)
+    assert code == 0

@@ -1,6 +1,7 @@
 # src/zipbundler/build.py
 """Core build functionality for creating zipapp bundles."""
 
+import io
 import stat
 import tempfile
 import zipfile
@@ -436,3 +437,72 @@ def get_interpreter(archive: Path | str) -> str | None:
         except UnicodeDecodeError:
             # Fallback to latin-1 if utf-8 fails (matches zipapp behavior)
             return line.decode("latin-1")
+
+
+def get_metadata_from_archive(archive: Path | str) -> dict[str, str] | None:
+    """Get metadata from PKG-INFO in an existing zipapp archive.
+
+    Args:
+        archive: Path to the zipapp archive (.pyz file)
+
+    Returns:
+        Dictionary with metadata fields (display_name, description, version,
+        author, license), or None if PKG-INFO is not present
+
+    Raises:
+        FileNotFoundError: If the archive file does not exist
+        ValueError: If the archive is not a valid zipapp file
+        zipfile.BadZipFile: If the archive is corrupted
+    """
+    archive_path = Path(archive)
+    if not archive_path.exists():
+        msg = f"Archive not found: {archive_path}"
+        raise FileNotFoundError(msg)
+
+    # Read the archive, skipping shebang if present
+    with archive_path.open("rb") as f:
+        # Check for shebang (first 2 bytes are #!)
+        first_two = f.read(2)
+        if first_two == b"#!":
+            # Skip shebang line
+            f.readline()
+        else:
+            # No shebang, rewind to start
+            f.seek(0)
+
+        # Read remaining data (the zip file)
+        zip_data = f.read()
+
+    # Open zip file from memory
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_data), "r") as zf:
+            if "PKG-INFO" not in zf.namelist():
+                return None
+
+            # Read PKG-INFO content
+            pkg_info_bytes = zf.read("PKG-INFO")
+            pkg_info_text = pkg_info_bytes.decode("utf-8")
+
+            # Parse PKG-INFO format (key: value lines)
+            metadata: dict[str, str] = {}
+            for line in pkg_info_text.splitlines():
+                if ":" in line:
+                    key, value = line.split(":", 1)
+                    key = key.strip()
+                    value = value.strip()
+                    # Map PKG-INFO fields to our metadata format
+                    if key == "Name":
+                        metadata["display_name"] = value
+                    elif key == "Version":
+                        metadata["version"] = value
+                    elif key == "Summary":
+                        metadata["description"] = value
+                    elif key == "Author":
+                        metadata["author"] = value
+                    elif key == "License":
+                        metadata["license"] = value
+
+            return metadata if metadata else None
+    except zipfile.BadZipFile as e:
+        msg = f"Invalid zip file in archive: {archive_path}"
+        raise ValueError(msg) from e
