@@ -27,7 +27,7 @@ Some of these we just want to consider, and may not want to implement.
 - **Entry Point Configuration**: Define entry points in config file
 
 ### Phase 3: Advanced Features
-- **Dependency Resolution**: Include dependencies from installed packages
+(No features currently planned)
 
 ## 🧰 CLI Commands
 

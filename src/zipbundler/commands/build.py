@@ -3,6 +3,8 @@
 """Handle the build subcommand."""
 
 import argparse
+import importlib.util
+from importlib.metadata import distributions as _distributions
 from pathlib import Path
 from typing import Any
 
@@ -17,15 +19,95 @@ from zipbundler.commands.validate import (
 from zipbundler.logs import getAppLogger
 
 
-def _resolve_package_pattern(pattern: str, cwd: Path) -> list[Path]:  # noqa: PLR0912
+def _resolve_installed_package(package_name: str) -> Path | None:
+    """Resolve an installed package by name to its location.
+
+    Uses importlib.util.find_spec to find the package location. If the package
+    is found, returns the Path to the package directory.
+
+    Args:
+        package_name: Name of the installed package (e.g., "apathetic_utils")
+
+    Returns:
+        Path to the package directory if found, None otherwise
+    """
+    logger = getAppLogger()
+
+    # Try importlib.util.find_spec (most reliable method)
+    try:
+        spec = importlib.util.find_spec(package_name)
+        if spec is not None and spec.origin is not None:
+            origin_path = Path(spec.origin)
+            # If origin is a file (e.g., __init__.py), use its parent directory
+            package_path = origin_path.parent if origin_path.is_file() else origin_path
+            if package_path.exists() and package_path.is_dir():
+                logger.debug(
+                    "Resolved installed package '%s' to: %s",
+                    package_name,
+                    package_path,
+                )
+                return package_path
+    except Exception as e:  # noqa: BLE001
+        logger.trace(
+            "Error finding package '%s' via importlib.util: %s", package_name, e
+        )
+
+    # Fallback: try importlib.metadata for distribution-based lookup
+    try:
+        # Check all distributions for a matching package
+        for dist in _distributions():
+            # Check if the distribution name matches (normalize names)
+            dist_name = getattr(dist.metadata, "Name", "") or ""
+            normalized_dist = dist_name.lower().replace("-", "_")
+            normalized_pkg = package_name.lower().replace("-", "_")
+            if dist_name and normalized_dist == normalized_pkg:
+                try:
+                    # Get the root of the distribution
+                    dist_file_path = dist.locate_file("")
+                    dist_path = Path(str(dist_file_path))
+                    # Look for the package directory within the distribution
+                    # The package name might be different from the distribution name
+                    possible_paths = [
+                        dist_path / package_name,
+                        dist_path / package_name.replace("-", "_"),
+                        dist_path / dist_name.replace("-", "_"),
+                    ]
+                    for possible_path in possible_paths:
+                        if possible_path.exists() and possible_path.is_dir():
+                            logger.debug(
+                                "Resolved installed package '%s' to: %s",
+                                package_name,
+                                possible_path,
+                            )
+                            return possible_path
+                    # If no exact match, return the distribution root
+                    if dist_path.exists():
+                        logger.debug(
+                            "Resolved installed package '%s' to distribution root: %s",
+                            package_name,
+                            dist_path,
+                        )
+                        return Path(dist_path)
+                except Exception as e:  # noqa: BLE001
+                    logger.trace("Error locating package '%s': %s", package_name, e)
+    except Exception as e:  # noqa: BLE001
+        logger.trace(
+            "Error finding package '%s' via importlib.metadata: %s", package_name, e
+        )
+
+    return None
+
+
+def _resolve_package_pattern(pattern: str, cwd: Path) -> list[Path]:  # noqa: C901, PLR0912, PLR0915
     """Resolve a package pattern to actual package paths.
 
     Handles:
     - Simple paths: "src/my_package" -> [Path("src/my_package")]
     - Glob patterns ending with /**/*.py: "src/**/*.py" -> [Path("src")]
+    - Installed packages: "apathetic_utils" -> [Path to installed package]
 
     Args:
-        pattern: Package pattern (path or glob)
+        pattern: Package pattern (path, glob, or installed package name)
         cwd: Current working directory for resolving relative paths
 
     Returns:
@@ -97,9 +179,31 @@ def _resolve_package_pattern(pattern: str, cwd: Path) -> list[Path]:  # noqa: PL
                 resolved.append(full_path)
             else:
                 logger.warning("Pattern '%s' is a file, not a directory", pattern)
+        # Path doesn't exist - try resolving as installed package name
+        # Only try if pattern doesn't look like a path
+        # (no slashes, no dots as path separators)
+        elif "/" not in pattern and "\\" not in pattern and not pattern.startswith("."):
+            # Try to resolve as installed package
+            installed_path = _resolve_installed_package(pattern)
+            if installed_path is not None:
+                resolved.append(installed_path)
+                logger.debug(
+                    "Resolved pattern '%s' as installed package: %s",
+                    pattern,
+                    installed_path,
+                )
+            else:
+                logger.warning(
+                    "Pattern '%s' resolved to non-existent path and is not an "
+                    "installed package: %s",
+                    pattern,
+                    full_path,
+                )
         else:
             logger.warning(
-                "Pattern '%s' resolved to non-existent path: %s", pattern, full_path
+                "Pattern '%s' resolved to non-existent path: %s",
+                pattern,
+                full_path,
             )
 
     return resolved
