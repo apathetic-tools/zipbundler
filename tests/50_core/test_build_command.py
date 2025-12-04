@@ -622,3 +622,48 @@ def test_cli_build_command_compression_level_override_config(tmp_path: Path) -> 
                 assert info.compress_type == zipfile.ZIP_DEFLATED
     finally:
         os.chdir(original_cwd)
+
+
+def test_cli_build_command_python_config(tmp_path: Path) -> None:
+    """Test build command with Python config file."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create a package structure
+        src_dir = tmp_path / "src" / "mypackage"
+        src_dir.mkdir(parents=True)
+        (src_dir / "__init__.py").write_text("")
+        (src_dir / "module.py").write_text("def func():\n    pass\n")
+
+        # Create a valid Python config file
+        config_file = tmp_path / ".zipbundler.py"
+        config_file.write_text(
+            """config = {
+    "packages": ["src/mypackage/**/*.py"],
+    "output": {
+        "path": "dist/bundle.zip"
+    }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["build"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify zip file was created
+        output_file = tmp_path / "dist" / "bundle.zip"
+        assert output_file.exists()
+
+        # Verify zip file is valid and contains expected files
+        with zipfile.ZipFile(output_file, "r") as zf:
+            names = zf.namelist()
+            assert any("mypackage/__init__.py" in name for name in names)
+            assert any("mypackage/module.py" in name for name in names)
+    finally:
+        os.chdir(original_cwd)

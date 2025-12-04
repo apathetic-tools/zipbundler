@@ -268,7 +268,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
     if not config_path:
         msg = (
             "No configuration file found. "
-            "Looking for .zipbundler.jsonc or pyproject.toml. "
+            "Looking for .zipbundler.py, .zipbundler.jsonc, or pyproject.toml. "
             "Use 'zipbundler init' to create a config file."
         )
         logger.error(msg)

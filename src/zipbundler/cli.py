@@ -154,7 +154,8 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         "-c",
         "--config",
         help=(
-            "Path to configuration file (default: .zipbundler.jsonc or pyproject.toml)"
+            "Path to configuration file "
+            "(default: .zipbundler.py, .zipbundler.jsonc, or pyproject.toml)"
         ),
     )
     build_parser.add_argument(
@@ -311,7 +312,8 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         "-c",
         "--config",
         help=(
-            "Path to configuration file (default: .zipbundler.jsonc or pyproject.toml)"
+            "Path to configuration file "
+            "(default: .zipbundler.py, .zipbundler.jsonc, or pyproject.toml)"
         ),
     )
     validate_parser.add_argument(

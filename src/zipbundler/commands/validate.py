@@ -5,8 +5,10 @@
 
 import argparse
 import re
+import sys
+import traceback
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from apathetic_utils import load_jsonc, load_toml
 
@@ -19,10 +21,12 @@ def find_config(config_path: str | None, cwd: Path) -> Path | None:
     Search order:
       1. Explicit path from CLI (--config)
       2. Default candidate files in current directory and parent directories:
+         - .zipbundler.py
          - .zipbundler.jsonc
          - pyproject.toml
          Searches from cwd up to filesystem root, returning first match
          (closest to cwd).
+         Priority: .py > .jsonc > .toml
 
     Returns the first matching path, or None if no config was found.
     """
@@ -44,6 +48,7 @@ def find_config(config_path: str | None, cwd: Path) -> Path | None:
     # Search from cwd up to filesystem root, returning first match (closest to cwd)
     current = cwd
     candidate_names = [
+        ".zipbundler.py",
         ".zipbundler.jsonc",
         "pyproject.toml",
     ]
@@ -65,11 +70,10 @@ def find_config(config_path: str | None, cwd: Path) -> Path | None:
         return None
 
     # --- 3. Handle multiple matches at same level ---
-    # Prefer .zipbundler.jsonc > pyproject.toml
+    # Prefer .zipbundler.py > .zipbundler.jsonc > pyproject.toml
     if len(found) > 1:
-        # Prefer .zipbundler.jsonc, then pyproject.toml
-        # Use name-based priority since .zipbundler.jsonc has no suffix
-        priority = {".zipbundler.jsonc": 0, "pyproject.toml": 1}
+        # Prefer .py, then .jsonc, then .toml
+        priority = {".zipbundler.py": 0, ".zipbundler.jsonc": 1, "pyproject.toml": 2}
         found_sorted = sorted(found, key=lambda p: priority.get(p.name, 99))
         names = ", ".join(p.name for p in found_sorted)
         logger.warning(
@@ -98,6 +102,59 @@ def _load_jsonc_config(config_path: Path) -> dict[str, Any]:
         raise ValueError(msg) from e
 
 
+def _load_python_config(config_path: Path) -> dict[str, Any]:
+    """Load Python configuration file (.zipbundler.py)."""
+    logger = getAppLogger()
+    logger.trace(f"[load_config] Loading Python config from {config_path}")
+
+    config_globals: dict[str, Any] = {}
+
+    # Allow local imports in Python configs (e.g. from ./helpers import foo)
+    # This is safe because configs are trusted user code.
+    parent_dir = str(config_path.parent)
+    added_to_sys_path = parent_dir not in sys.path
+    if added_to_sys_path:
+        sys.path.insert(0, parent_dir)
+
+    # Execute the python config file
+    try:
+        source = config_path.read_text(encoding="utf-8")
+        exec(compile(source, str(config_path), "exec"), config_globals)  # noqa: S102
+        logger.trace(
+            f"[EXEC] globals after exec: {list(config_globals.keys())}",
+        )
+    except Exception as e:
+        tb = traceback.format_exc()
+        xmsg = (
+            f"Error while executing Python config: {config_path.name}\n"
+            f"{type(e).__name__}: {e}\n{tb}"
+        )
+        # Raise a generic runtime error for main() to catch and print cleanly
+        raise RuntimeError(xmsg) from e
+    finally:
+        # Only remove if we actually inserted it
+        if added_to_sys_path and sys.path[0] == parent_dir:
+            sys.path.pop(0)
+
+    # Check for config variable
+    if "config" in config_globals:
+        result = config_globals["config"]
+        if not isinstance(result, (dict, type(None))):
+            xmsg = (
+                f"config in {config_path.name} must be a dict or None"
+                f", not {type(result).__name__}"
+            )
+            raise TypeError(xmsg)
+        if result is None:
+            xmsg = f"config in {config_path.name} is None (empty config)"
+            raise ValueError(xmsg)
+        # Explicitly narrow the loaded config to its expected type.
+        return cast("dict[str, Any]", result)
+
+    xmsg = f"{config_path.name} did not define `config`"
+    raise ValueError(xmsg)
+
+
 def _load_toml_config(config_path: Path) -> dict[str, Any]:
     """Load TOML configuration file (from pyproject.toml)."""
     logger = getAppLogger()
@@ -120,6 +177,8 @@ def _load_toml_config(config_path: Path) -> dict[str, Any]:
 
 def load_config(config_path: Path) -> dict[str, Any]:
     """Load configuration from file."""
+    if config_path.suffix == ".py" or config_path.name == ".zipbundler.py":
+        return _load_python_config(config_path)
     if config_path.suffix == ".jsonc" or config_path.name == ".zipbundler.jsonc":
         return _load_jsonc_config(config_path)
     if config_path.suffix == ".toml" or config_path.name == "pyproject.toml":
@@ -431,7 +490,7 @@ def handle_validate_command(args: argparse.Namespace) -> int:
     if not config_path:
         msg = (
             "No configuration file found. "
-            "Looking for .zipbundler.jsonc or pyproject.toml"
+            "Looking for .zipbundler.py, .zipbundler.jsonc, or pyproject.toml"
         )
         logger.error(msg)
         return 1

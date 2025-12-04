@@ -653,3 +653,115 @@ def test_cli_validate_command_invalid_shebang_strict_mode(tmp_path: Path) -> Non
         assert code == 1
     finally:
         os.chdir(original_cwd)
+
+
+def test_cli_validate_command_python_config(tmp_path: Path) -> None:
+    """Test validate command with valid Python config file."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create a valid Python config file
+        config_file = tmp_path / ".zipbundler.py"
+        config_file.write_text(
+            """config = {
+    "packages": ["src/my_package/**/*.py"]
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (valid config)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_python_config_missing_config(tmp_path: Path) -> None:
+    """Test validate command with Python config file that doesn't define config."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create a Python config file without config variable
+        config_file = tmp_path / ".zipbundler.py"
+        config_file.write_text(
+            """# No config defined
+packages = ["src/my_package/**/*.py"]
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 1 (error - no config defined)
+        assert code == 1
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_python_config_invalid_syntax(tmp_path: Path) -> None:
+    """Test validate command with Python config file with invalid syntax."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create a Python config file with invalid syntax
+        config_file = tmp_path / ".zipbundler.py"
+        config_file.write_text(
+            """config = {
+    "packages": ["src/my_package/**/*.py"]
+    # Missing closing brace
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 1 (error - invalid syntax)
+        assert code == 1
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_prefers_python_over_jsonc(tmp_path: Path) -> None:
+    """Test validate prefers .zipbundler.py over .zipbundler.jsonc when both exist."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create both config files
+        jsonc_config = tmp_path / ".zipbundler.jsonc"
+        jsonc_config.write_text(
+            """{
+  "packages": ["jsonc_package/**/*.py"]
+}
+""",
+            encoding="utf-8",
+        )
+
+        python_config = tmp_path / ".zipbundler.py"
+        python_config.write_text(
+            """config = {
+    "packages": ["python_package/**/*.py"]
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (config found, python preferred)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
