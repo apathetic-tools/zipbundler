@@ -84,7 +84,6 @@ Some of these we just want to consider, and may not want to implement.
 
 ## 🔌 API Implementation
 
-- **Programmatic API**: Python API for bundling from code
 - **Config Parser**: Parse and validate configuration files
 - **Package Scanner**: Discover and scan Python packages
 - **Zip Builder**: Core logic for creating zip files
