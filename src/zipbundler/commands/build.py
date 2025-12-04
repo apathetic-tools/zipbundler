@@ -320,13 +320,25 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         output_config: dict[str, Any] | None = config.get("output")
         if output_config:  # pyright: ignore[reportUnnecessaryIsInstance]
             output_path_str: str | None = output_config.get("path")
+            output_name: str | None = output_config.get("name")
         else:
             output_path_str = None
+            output_name = None
 
         if not output_path_str:
             # Default output path
-            output_path_str = "dist/bundle.zip"
-            logger.debug("No output path specified, using default: %s", output_path_str)
+            if output_name:
+                # Use output.name to generate default path
+                output_path_str = f"dist/{output_name}.zip"
+                logger.debug(
+                    "No output path specified, using output.name: %s",
+                    output_path_str,
+                )
+            else:
+                output_path_str = "dist/bundle.zip"
+                logger.debug(
+                    "No output path specified, using default: %s", output_path_str
+                )
 
         output = (cwd / output_path_str).resolve()
 

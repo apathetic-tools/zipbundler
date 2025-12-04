@@ -59,7 +59,7 @@ Some of these we just want to consider, and may not want to implement.
   // Output configuration
   "output": {
     "path": "dist/my_package.zip",
-    "name": "my_package"  // Optional: override zip name
+    "name": "my_package"  // Optional: used to generate default path (dist/{name}.zip) when path is not specified
   },
   
   // Entry point for executable zip
