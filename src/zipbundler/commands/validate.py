@@ -250,6 +250,46 @@ def _validate_output_path(output_path: str, cwd: Path) -> tuple[bool, str]:
         return False, msg
 
 
+def resolve_output_path_from_config(
+    output_config: dict[str, Any] | None,
+    default_directory: str = "dist",
+    default_name: str = "bundle",
+) -> Path:
+    """Resolve output path from config output section.
+
+    Handles:
+    - output.path: Full path (takes precedence)
+    - output.directory + output.name: Directory and filename
+    - output.name: Filename only (uses default_directory)
+    - None: Uses default_directory and default_name
+
+    Args:
+        output_config: Output configuration dict with optional 'path', 'directory',
+            'name'
+        default_directory: Default directory if not specified (default: "dist")
+        default_name: Default filename (without extension) if not specified
+            (default: "bundle")
+
+    Returns:
+        Resolved Path object
+    """
+    if not output_config:
+        return Path(f"{default_directory}/{default_name}.pyz")
+
+    output_path_str: str | None = output_config.get("path")
+    if output_path_str:
+        return Path(output_path_str)
+
+    output_directory: str | None = output_config.get("directory")
+    output_name: str | None = output_config.get("name")
+
+    # Use directory from config or default, name from config or default
+    directory = output_directory if output_directory is not None else default_directory
+    name = output_name if output_name is not None else default_name
+
+    return Path(f"{directory}/{name}.pyz")
+
+
 def _validate_packages_field(
     config: dict[str, Any],
     errors: list[str],
@@ -332,6 +372,13 @@ def _validate_output_field(
         output_name: Any = output["name"]  # pyright: ignore[reportUnknownVariableType]
         if not isinstance(output_name, str):
             msg = "Field 'output.name' must be a string"
+            warnings.append(msg)
+
+    # Validate output.directory field (optional)
+    if "directory" in output:
+        output_directory: Any = output["directory"]  # pyright: ignore[reportUnknownVariableType]
+        if not isinstance(output_directory, str):
+            msg = "Field 'output.directory' must be a string"
             warnings.append(msg)
 
 

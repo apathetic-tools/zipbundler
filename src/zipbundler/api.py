@@ -14,7 +14,12 @@ from apathetic_utils import find_all_packages_under_path, has_glob_chars
 from .actions import watch_for_changes
 from .build import build_zipapp, extract_archive_to_tempdir, list_files
 from .commands.build import extract_entry_point_code
-from .commands.validate import find_config, load_config, validate_config_structure
+from .commands.validate import (
+    find_config,
+    load_config,
+    resolve_output_path_from_config,
+    validate_config_structure,
+)
 from .commands.zipapp_style import is_archive_file
 from .constants import DEFAULT_WATCH_INTERVAL
 from .logs import getAppLogger
@@ -289,17 +294,7 @@ def build_zip(  # noqa: C901, PLR0912, PLR0913, PLR0915
         # Extract output path from config
         if output_path is None:
             output_config: dict[str, Any] | None = config.get("output")
-            if output_config:
-                output_path_str: str | None = output_config.get("path")
-                output_name: str | None = output_config.get("name")
-                if output_path_str:
-                    output_path = Path(output_path_str)
-                elif output_name:
-                    output_path = Path(f"dist/{output_name}.pyz")
-                else:
-                    output_path = Path("dist/bundle.pyz")
-            else:
-                output_path = Path("dist/bundle.pyz")
+            output_path = resolve_output_path_from_config(output_config)
 
         # Extract options from config
         options: dict[str, Any] | None = config.get("options")
@@ -402,7 +397,7 @@ def build_zip(  # noqa: C901, PLR0912, PLR0913, PLR0915
     )
 
 
-def watch(  # noqa: C901, PLR0912
+def watch(
     config_path: str | Path | None = None,
     *,
     packages: list[str] | None = None,
@@ -448,23 +443,13 @@ def watch(  # noqa: C901, PLR0912
             exclude = config.get("exclude")
         if output_path is None:
             output_config: dict[str, Any] | None = config.get("output")
-            if output_config:
-                output_path_str: str | None = output_config.get("path")
-                output_name: str | None = output_config.get("name")
-                if output_path_str:
-                    output_path = Path(output_path_str)
-                elif output_name:
-                    output_path = Path(f"dist/{output_name}.pyz")
-                else:
-                    output_path = Path("dist/bundle.pyz")
-            else:
-                output_path = Path("dist/bundle.pyz")
+            output_path = resolve_output_path_from_config(output_config)
 
     if not packages:
         msg = "packages must be provided if config_path is not specified"
         raise ValueError(msg)
     if output_path is None:
-        output_path = Path("dist/bundle.pyz")
+        output_path = resolve_output_path_from_config(None)
 
     # Resolve output path relative to cwd
     if not isinstance(output_path, Path):

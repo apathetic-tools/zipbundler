@@ -299,6 +299,99 @@ def test_cli_build_command_output_name_ignored_with_path(
         os.chdir(original_cwd)
 
 
+def test_cli_build_command_output_directory(tmp_path: Path) -> None:
+    """Test build command with output.directory configuration."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create a package structure
+        src_dir = tmp_path / "src" / "mypackage"
+        src_dir.mkdir(parents=True)
+        (src_dir / "__init__.py").write_text("")
+        (src_dir / "module.py").write_text("def func():\n    pass\n")
+
+        # Create config file with output.directory and output.name
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/mypackage/**/*.py"],
+  "output": {
+    "directory": "build",
+    "name": "my_package"
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["build"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify zip file was created in the custom directory
+        output_file = tmp_path / "build" / "my_package.pyz"
+        assert output_file.exists()
+
+        # Verify zip file is valid and contains expected files
+        with zipfile.ZipFile(output_file, "r") as zf:
+            names = zf.namelist()
+            assert any("mypackage/__init__.py" in name for name in names)
+            assert any("mypackage/module.py" in name for name in names)
+
+        # Verify default dist directory was NOT used
+        assert not (tmp_path / "dist" / "my_package.pyz").exists()
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_build_command_output_directory_only(tmp_path: Path) -> None:
+    """Test build command with only output.directory (no name)."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create a package structure
+        src_dir = tmp_path / "src" / "mypackage"
+        src_dir.mkdir(parents=True)
+        (src_dir / "__init__.py").write_text("")
+        (src_dir / "module.py").write_text("def func():\n    pass\n")
+
+        # Create config file with only output.directory
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/mypackage/**/*.py"],
+  "output": {
+    "directory": "output"
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["build"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify zip file was created in custom directory with default name
+        output_file = tmp_path / "output" / "bundle.pyz"
+        assert output_file.exists()
+
+        # Verify zip file is valid
+        with zipfile.ZipFile(output_file, "r") as zf:
+            names = zf.namelist()
+            assert any("mypackage/__init__.py" in name for name in names)
+    finally:
+        os.chdir(original_cwd)
+
+
 def test_cli_build_command_invalid_config(tmp_path: Path) -> None:
     """Test build command with invalid config (missing packages)."""
     original_cwd = Path.cwd()

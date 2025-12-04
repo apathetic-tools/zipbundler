@@ -14,6 +14,7 @@ from zipbundler.build import build_zipapp
 from zipbundler.commands.validate import (
     find_config,
     load_config,
+    resolve_output_path_from_config,
     validate_config_structure,
 )
 from zipbundler.logs import getAppLogger
@@ -323,29 +324,12 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
 
         # Extract output path
         output_config: dict[str, Any] | None = config.get("output")
-        if output_config:  # pyright: ignore[reportUnnecessaryIsInstance]
-            output_path_str: str | None = output_config.get("path")
-            output_name: str | None = output_config.get("name")
-        else:
-            output_path_str = None
-            output_name = None
-
-        if not output_path_str:
-            # Default output path
-            if output_name:
-                # Use output.name to generate default path
-                output_path_str = f"dist/{output_name}.pyz"
-                logger.debug(
-                    "No output path specified, using output.name: %s",
-                    output_path_str,
-                )
-            else:
-                output_path_str = "dist/bundle.pyz"
-                logger.debug(
-                    "No output path specified, using default: %s", output_path_str
-                )
-
-        output = (cwd / output_path_str).resolve()
+        output_path = resolve_output_path_from_config(output_config)
+        logger.debug(
+            "Resolved output path from config: %s",
+            output_path,
+        )
+        output = (cwd / output_path).resolve()
 
         # Extract entry point
         entry_point_str: str | None = config.get("entry_point")

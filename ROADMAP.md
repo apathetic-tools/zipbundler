@@ -22,7 +22,7 @@ Some of these we just want to consider, and may not want to implement.
 
 ### Phase 2: Configuration System
 - **Config File Support**: `.zipbundler.py`, `.zipbundler.jsonc`, or `pyproject.toml` integration (searches current directory and parent directories) ✅
-- **Output Path**: Configurable output directory and filename
+- **Output Path**: Configurable output directory and filename ✅
 - **Entry Point Configuration**: Define entry points in config file
 - **Metadata Auto-Detection**: `init` command auto-detects metadata from `pyproject.toml` when creating config files ✅
 
@@ -59,7 +59,8 @@ Some of these we just want to consider, and may not want to implement.
   // Output configuration
   "output": {
     "path": "dist/my_package.zip",
-    "name": "my_package"  // Optional: used to generate default path (dist/{name}.pyz) when path is not specified
+    "directory": "build",  // Optional: output directory (default: "dist")
+    "name": "my_package"  // Optional: used to generate default path ({directory}/{name}.pyz) when path is not specified
   },
   
   // Entry point for executable zip

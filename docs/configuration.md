@@ -70,13 +70,15 @@ Output configuration for the zip file.
 {
   "output": {
     "path": "dist/my_package.zip",
+    "directory": "build",  // Optional: output directory (default: "dist")
     "name": "my_package"  // Optional: override zip name
   }
 }
 ```
 
-- `path`: Full path to output zip file (default: `dist/{package_name}.zip`)
-- `name`: Optional name override for the zip file
+- `path`: Full path to output zip file (takes precedence over `directory` and `name`)
+- `directory`: Output directory (default: `"dist"`). Used with `name` to generate path when `path` is not specified
+- `name`: Optional name override for the zip file. When used with `directory`, generates `{directory}/{name}.pyz`
 
 #### `entry_point` (optional)
 Entry point for executable zip files (equivalent to `-m` / `--main` in zipapp-style CLI).
@@ -175,6 +177,7 @@ version = "1.0.0"
   ],
   "output": {
     "path": "dist/my_package.zip",
+    "directory": "build",
     "name": "my_package"
   },
   "entry_point": "my_package.__main__:main",
