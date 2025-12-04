@@ -7,11 +7,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from zipbundler.build import list_files
+from zipbundler.build import list_files, list_files_from_archive
+from zipbundler.commands.zipapp_style import is_archive_file
 from zipbundler.logs import getAppLogger
 
 
-def handle_list_command(args: argparse.Namespace) -> int:
+def handle_list_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR0912
     """Handle the list subcommand."""
     logger = getAppLogger()
 
@@ -20,11 +21,29 @@ def handle_list_command(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        packages = [Path(p) for p in args.source]
-        files = list_files(packages, count=args.count)
+        # Check if any source is an archive file
+        sources = [Path(p) for p in args.source]
+        is_archive = any(is_archive_file(src) for src in sources)
+
+        if is_archive:
+            # Handle archive files
+            if len(sources) > 1:
+                logger.error("Only one archive file can be listed at a time")
+                return 1
+
+            archive_path = sources[0]
+            if not is_archive_file(archive_path):
+                logger.error("Source must be an archive file (.pyz) or directory")
+                return 1
+
+            files = list_files_from_archive(archive_path, count=args.count)
+        else:
+            # Handle directory sources (existing behavior)
+            packages = sources
+            files = list_files(packages, count=args.count)
 
         if args.count:
-            # Count already printed by list_files
+            # Count already printed by list_files or list_files_from_archive
             result = 0
         elif args.tree:
             # Build a tree structure

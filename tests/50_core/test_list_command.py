@@ -11,6 +11,7 @@ import zipbundler.cli as mod_main
 
 EXPECTED_FILE_COUNT_BASIC = 2
 EXPECTED_FILE_COUNT_MULTIPLE = 4
+EXPECTED_FILE_COUNT_ARCHIVE = 2
 ARGPARSE_ERROR_EXIT_CODE = 2
 
 
@@ -213,3 +214,198 @@ def test_cli_list_command_no_source() -> None:
 
     # Should exit with error code 2 (argparse error)
     assert exc_info.value.code == ARGPARSE_ERROR_EXIT_CODE
+
+
+def test_list_files_from_archive_basic(tmp_path: Path) -> None:
+    """Test list_files_from_archive function with a simple archive."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
+
+    # Create an archive
+    archive = tmp_path / "app.pyz"
+    mod_build.build_zipapp(
+        output=archive,
+        packages=[pkg_dir],
+        entry_point=None,
+        shebang="#!/usr/bin/env python3",
+    )
+
+    # List files from archive
+    files = mod_build.list_files_from_archive(archive)
+
+    # Should find Python files from the archive
+    assert len(files) >= EXPECTED_FILE_COUNT_ARCHIVE
+    arcnames = [str(arcname) for _, arcname in files]
+    assert any("__init__.py" in a for a in arcnames)
+    assert any("module.py" in a for a in arcnames)
+
+
+def test_list_files_from_archive_with_entry_point(tmp_path: Path) -> None:
+    """Test list_files_from_archive function with archive containing entry point."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
+
+    # Create an archive with entry point
+    archive = tmp_path / "app.pyz"
+    mod_build.build_zipapp(
+        output=archive,
+        packages=[pkg_dir],
+        entry_point="from mypackage import func\nfunc()",
+        shebang="#!/usr/bin/env python3",
+    )
+
+    # List files from archive
+    files = mod_build.list_files_from_archive(archive)
+
+    # Should find Python files including __main__.py
+    arcnames = [str(arcname) for _, arcname in files]
+    assert any("__main__.py" in a for a in arcnames)
+    assert any("__init__.py" in a for a in arcnames)
+    assert any("module.py" in a for a in arcnames)
+
+
+def test_list_files_from_archive_count_mode(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test list_files_from_archive function with count mode."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
+
+    # Create an archive
+    archive = tmp_path / "app.pyz"
+    mod_build.build_zipapp(
+        output=archive,
+        packages=[pkg_dir],
+        entry_point=None,
+        shebang="#!/usr/bin/env python3",
+    )
+
+    # List files from archive with count
+    files = mod_build.list_files_from_archive(archive, count=True)
+
+    # Should return empty list when count=True
+    assert files == []
+
+    # Should have printed count
+    captured = capsys.readouterr()
+    assert "Files:" in captured.out
+
+
+def test_list_files_from_archive_nonexistent(tmp_path: Path) -> None:
+    """Test list_files_from_archive function with nonexistent archive."""
+    nonexistent = tmp_path / "nonexistent.pyz"
+
+    # Should raise FileNotFoundError
+    with pytest.raises(FileNotFoundError):
+        mod_build.list_files_from_archive(nonexistent)
+
+
+def test_cli_list_command_archive(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test list command via CLI with archive file."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
+
+    # Create an archive
+    archive = tmp_path / "app.pyz"
+    mod_build.build_zipapp(
+        output=archive,
+        packages=[pkg_dir],
+        entry_point=None,
+        shebang="#!/usr/bin/env python3",
+    )
+
+    # Handle both module and function cases (runtime mode swap)
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func(["list", str(archive)])
+
+    # Verify exit code is 0
+    assert code == 0
+
+    # Verify output contains the files
+    captured = capsys.readouterr()
+    output = captured.out
+    assert "__init__.py" in output or "mypackage" in output
+    assert "module.py" in output
+
+
+def test_cli_list_command_archive_count(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test list command via CLI with archive file and --count option."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
+
+    # Create an archive
+    archive = tmp_path / "app.pyz"
+    mod_build.build_zipapp(
+        output=archive,
+        packages=[pkg_dir],
+        entry_point=None,
+        shebang="#!/usr/bin/env python3",
+    )
+
+    # Handle both module and function cases (runtime mode swap)
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func(["list", str(archive), "--count"])
+
+    # Verify exit code is 0
+    assert code == 0
+
+    # Verify output contains count
+    captured = capsys.readouterr()
+    output = captured.out
+    assert "Files:" in output
+
+
+def test_cli_list_command_archive_tree(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test list command via CLI with archive file and --tree option."""
+    # Create a test package with nested structure
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
+    subdir = pkg_dir / "subpackage"
+    subdir.mkdir()
+    (subdir / "__init__.py").write_text("")
+    (subdir / "submodule.py").write_text("def subfunc():\n    pass\n")
+
+    # Create an archive
+    archive = tmp_path / "app.pyz"
+    mod_build.build_zipapp(
+        output=archive,
+        packages=[pkg_dir],
+        entry_point=None,
+        shebang="#!/usr/bin/env python3",
+    )
+
+    # Handle both module and function cases (runtime mode swap)
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func(["list", str(archive), "--tree"])
+
+    # Verify exit code is 0
+    assert code == 0
+
+    # Verify output contains tree structure
+    captured = capsys.readouterr()
+    output = captured.out
+    # Tree should have tree characters
+    assert "├──" in output or "└──" in output

@@ -12,7 +12,7 @@ from zipbundler.commands.build import extract_entry_point_code
 from zipbundler.logs import getAppLogger
 
 
-def _is_archive_file(source: Path) -> bool:
+def is_archive_file(source: Path) -> bool:
     """Check if source is a zipapp archive file.
 
     Args:
@@ -71,7 +71,7 @@ def handle_zipapp_style_command(args: argparse.Namespace) -> int:  # noqa: C901,
 
     # Check if source is an archive
     temp_dir: Path | None = None
-    if _is_archive_file(source):
+    if is_archive_file(source):
         logger.debug("SOURCE is an archive file, extracting to temporary directory")
         try:
             temp_dir = extract_archive_to_tempdir(source)

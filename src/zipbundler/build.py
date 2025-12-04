@@ -439,6 +439,80 @@ def get_interpreter(archive: Path | str) -> str | None:
             return line.decode("latin-1")
 
 
+def list_files_from_archive(
+    archive: Path | str,
+    *,
+    count: bool = False,
+) -> list[tuple[Path, Path]]:
+    """List files contained in a zipapp archive.
+
+    Args:
+        archive: Path to the zipapp archive (.pyz file)
+        count: If True, only return count (empty list, count in logger)
+
+    Returns:
+        List of tuples (file_path, arcname) for files in the archive.
+        file_path is a placeholder Path object (not a real file system path).
+        arcname is the path within the archive.
+
+    Raises:
+        FileNotFoundError: If the archive file does not exist
+        ValueError: If the archive is not a valid zipapp file
+        zipfile.BadZipFile: If the archive is corrupted
+    """
+    logger = getAppLogger()
+    archive_path = Path(archive)
+    if not archive_path.exists():
+        msg = f"Archive not found: {archive_path}"
+        raise FileNotFoundError(msg)
+
+    # Read the archive, skipping shebang if present
+    with archive_path.open("rb") as f:
+        # Check for shebang (first 2 bytes are #!)
+        first_two = f.read(2)
+        if first_two == b"#!":
+            # Skip shebang line
+            f.readline()
+        else:
+            # No shebang, rewind to start
+            f.seek(0)
+
+        # Read remaining data (the zip file)
+        zip_data = f.read()
+
+    # Open zip file from memory
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_data), "r") as zf:
+            # Get all file names from the archive
+            file_names = zf.namelist()
+
+            # Filter to only Python files (and special files like __main__.py, PKG-INFO)
+            # This matches the behavior of list_files which only includes .py files
+            python_files = [
+                name
+                for name in file_names
+                if name.endswith(".py") or name in ("__main__.py", "PKG-INFO")
+            ]
+
+            if count:
+                logger.info("Files: %d", len(python_files))
+                return []
+
+            # Create tuples with placeholder Path and arcname
+            files: list[tuple[Path, Path]] = []
+            for name in python_files:
+                # Use archive path as placeholder for file_path
+                # arcname is the path within the archive
+                arcname = Path(name)
+                files.append((archive_path, arcname))
+                logger.trace("Found file in archive: %s", arcname)
+
+            return files
+    except zipfile.BadZipFile as e:
+        msg = f"Invalid zip file in archive: {archive_path}"
+        raise ValueError(msg) from e
+
+
 def get_metadata_from_archive(archive: Path | str) -> dict[str, str] | None:
     """Get metadata from PKG-INFO in an existing zipapp archive.
 
