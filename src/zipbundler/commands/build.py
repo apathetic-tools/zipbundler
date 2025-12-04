@@ -361,7 +361,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         # Extract options
         options: dict[str, Any] | None = config.get("options")
         shebang: str | None = "#!/usr/bin/env python3"
-        compress = False
+        compression: str | None = None
         compression_level: int | None = None
         main_guard = True
 
@@ -383,14 +383,15 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
 
             # Compression
             compression_val = options.get("compression")
-            if compression_val == "deflate":
-                compress = True
-            elif compression_val in ("stored", None):
-                compress = False
-            else:
-                logger.warning(
-                    "Unknown compression method: %s, using 'stored'", compression_val
-                )
+            if compression_val is not None:
+                if isinstance(compression_val, str):
+                    compression = compression_val
+                elif isinstance(compression_val, bool):
+                    # Backward compatibility: True -> "deflate", False -> "stored"
+                    compression = "deflate" if compression_val else "stored"
+            # Default to "stored" if not specified
+            if compression is None:
+                compression = "stored"
 
             # Compression level
             if "compression_level" in options:
@@ -419,7 +420,8 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                 else:
                     shebang = f"#!{args.shebang}"
         if hasattr(args, "compress") and args.compress is not None:
-            compress = args.compress
+            # CLI --compress flag: True -> "deflate", False -> "stored"
+            compression = "deflate" if args.compress else "stored"
         if hasattr(args, "exclude") and args.exclude:
             exclude = args.exclude
         if hasattr(args, "main_guard") and args.main_guard is not None:
@@ -435,7 +437,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             packages=packages,
             entry_point=entry_point_code,
             shebang=shebang,
-            compress=compress,
+            compression=compression,
             compression_level=compression_level,
             exclude=exclude,
             main_guard=main_guard,

@@ -34,12 +34,13 @@ def handle_watch_command(args: argparse.Namespace) -> int:
 
         # Build rebuild function
         def rebuild() -> None:
+            compression = "deflate" if getattr(args, "compress", False) else "stored"
             build_zipapp(
                 output=output,
                 packages=packages,
                 entry_point=args.entry_point,
                 shebang=args.shebang or "#!/usr/bin/env python3",
-                compress=args.compress,
+                compression=compression,
                 exclude=args.exclude,
                 main_guard=getattr(args, "main_guard", True),
             )

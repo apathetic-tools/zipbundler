@@ -74,13 +74,60 @@ def _matches_exclude_pattern(
     return is_excluded_raw(file_path, exclude_patterns, root)
 
 
+def _get_compression_method(compression: str | None) -> tuple[int, str]:
+    """Get zipfile compression constant and method name from compression string.
+
+    Args:
+        compression: Compression method string ("deflate", "stored", "bzip2", "lzma")
+
+    Returns:
+        Tuple of (compression_constant, method_name)
+
+    Raises:
+        ValueError: If compression method is not supported or required modules
+            unavailable
+    """
+    if compression is None or compression == "stored":
+        return zipfile.ZIP_STORED, "stored"
+
+    if compression == "deflate":
+        return zipfile.ZIP_DEFLATED, "deflate"
+
+    if compression == "bzip2":
+        if not hasattr(zipfile, "ZIP_BZIP2"):
+            msg = "bzip2 compression not available in this Python version"
+            raise ValueError(msg)
+        try:
+            import bz2  # noqa: F401, PLC0415  # pyright: ignore[reportUnusedImport]
+        except ImportError:
+            msg = "bzip2 compression requires the bz2 module"
+            raise ValueError(msg) from None
+        return zipfile.ZIP_BZIP2, "bzip2"
+
+    if compression == "lzma":
+        if not hasattr(zipfile, "ZIP_LZMA"):
+            msg = "lzma compression not available in this Python version"
+            raise ValueError(msg)
+        try:
+            import lzma  # noqa: F401, PLC0415  # pyright: ignore[reportUnusedImport]
+        except ImportError:
+            msg = "lzma compression requires the lzma module"
+            raise ValueError(msg) from None
+        return zipfile.ZIP_LZMA, "lzma"
+
+    valid_methods = ["deflate", "stored", "bzip2", "lzma"]
+    methods_str = ", ".join(valid_methods)
+    msg = f"Unknown compression method: {compression}. Valid options: {methods_str}"
+    raise ValueError(msg)
+
+
 def build_zipapp(  # noqa: C901, PLR0912, PLR0915
     output: Path,
     packages: list[Path],
     entry_point: str | None = None,
     shebang: str | None = "#!/usr/bin/env python3",
     *,
-    compress: bool = False,
+    compression: str | None = None,
     compression_level: int | None = None,
     dry_run: bool = False,
     exclude: list[str] | None = None,
@@ -96,10 +143,10 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0915
             If None, no __main__.py is created.
         shebang: Shebang line to prepend to the zip file.
             If None or empty string, no shebang is added.
-        compress: Whether to compress the zip file using deflate method.
-            Defaults to False (no compression) to match zipapp behavior.
+        compression: Compression method ("deflate", "stored", "bzip2", "lzma").
+            Defaults to None which maps to "stored" (no compression).
         compression_level: Compression level for deflate method (0-9).
-            Only used when compress=True. Defaults to 6 if not specified.
+            Only used when compression="deflate". Defaults to 6 if not specified.
             Higher values = more compression but slower.
         dry_run: If True, preview what would be bundled without creating zip.
         exclude: Optional list of glob patterns for files/directories to exclude.
@@ -118,18 +165,18 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0915
         xmsg = "At least one package must be provided"
         raise ValueError(xmsg)
 
-    compression = zipfile.ZIP_DEFLATED if compress else zipfile.ZIP_STORED
-    # Default compression level is 6 (zlib default) if not specified
-    if compression_level is None:
+    compression_const, compression_name = _get_compression_method(compression)
+    # Default compression level is 6 (zlib default) if not specified for deflate
+    if compression_level is None and compression_name == "deflate":
         compression_level = 6
     exclude_patterns = exclude or []
     logger.debug("Building zipapp: %s", output)
     logger.debug("Packages: %s", [str(p) for p in packages])
     logger.debug("Entry point: %s", entry_point)
-    if compress:
-        logger.debug("Compression: deflate (level %d)", compression_level)
+    if compression_level is not None and compression_name == "deflate":
+        logger.debug("Compression: %s (level %d)", compression_name, compression_level)
     else:
-        logger.debug("Compression: stored")
+        logger.debug("Compression: %s", compression_name)
     logger.debug("Dry run: %s", dry_run)
     if exclude_patterns:
         logger.debug("Exclude patterns: %s", exclude_patterns)
@@ -169,10 +216,12 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0915
         summary_parts.append(f"Files: {file_count}")
         if entry_point is not None:
             summary_parts.append("Entry point: yes")
-        if compress:
-            summary_parts.append(f"Compression: deflate (level {compression_level})")
+        if compression_level is not None and compression_name == "deflate":
+            summary_parts.append(
+                f"Compression: {compression_name} (level {compression_level})"
+            )
         else:
-            summary_parts.append("Compression: stored")
+            summary_parts.append(f"Compression: {compression_name}")
         if shebang:
             summary_parts.append(f"Shebang: {shebang}")
         else:
@@ -185,10 +234,12 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0915
 
     # Use compresslevel parameter when compression is ZIP_DEFLATED
     compresslevel: int | None = (
-        compression_level if compression == zipfile.ZIP_DEFLATED else None
+        compression_level if compression_const == zipfile.ZIP_DEFLATED else None
     )
 
-    with zipfile.ZipFile(output, "w", compression, compresslevel=compresslevel) as zf:
+    with zipfile.ZipFile(
+        output, "w", compression=compression_const, compresslevel=compresslevel
+    ) as zf:
         # Write PKG-INFO if metadata is provided
         pkg_info = _generate_pkg_info(metadata)
         if pkg_info:

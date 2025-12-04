@@ -156,7 +156,7 @@ def test_zipapp_style_from_archive_compress(tmp_path: Path) -> None:
         output=initial_archive,
         packages=[pkg_dir],
         entry_point=None,
-        compress=False,  # Initial archive not compressed
+        compression="stored",  # Initial archive not compressed
     )
 
     # Build new archive with compression

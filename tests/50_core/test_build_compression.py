@@ -4,6 +4,8 @@
 import zipfile
 from pathlib import Path
 
+import pytest
+
 import zipbundler.build as mod_build
 
 
@@ -21,7 +23,7 @@ def test_build_zipapp_with_compression(tmp_path: Path) -> None:
         output=output,
         packages=[pkg_dir],
         entry_point=None,
-        compress=True,
+        compression="deflate",
     )
 
     # Verify zip file was created
@@ -48,7 +50,7 @@ def test_build_zipapp_without_compression(tmp_path: Path) -> None:
         output=output,
         packages=[pkg_dir],
         entry_point=None,
-        compress=False,
+        compression="stored",
     )
 
     # Verify zip file was created
@@ -105,7 +107,7 @@ def test_build_zipapp_compression_affects_size(tmp_path: Path) -> None:
         output=output_compressed,
         packages=[pkg_dir],
         entry_point=None,
-        compress=True,
+        compression="deflate",
     )
 
     # Build without compression
@@ -113,7 +115,7 @@ def test_build_zipapp_compression_affects_size(tmp_path: Path) -> None:
         output=output_uncompressed,
         packages=[pkg_dir],
         entry_point=None,
-        compress=False,
+        compression="stored",
     )
 
     # Compressed version should be smaller (or at least not larger)
@@ -143,7 +145,7 @@ def test_build_zipapp_with_compression_level(tmp_path: Path) -> None:
         output=output,
         packages=[pkg_dir],
         entry_point=None,
-        compress=True,
+        compression="deflate",
         compression_level=9,
     )
 
@@ -171,7 +173,7 @@ def test_build_zipapp_compression_level_default(tmp_path: Path) -> None:
         output=output,
         packages=[pkg_dir],
         entry_point=None,
-        compress=True,
+        compression="deflate",
     )
 
     # Verify zip file was created
@@ -201,7 +203,7 @@ def test_build_zipapp_compression_level_affects_size(tmp_path: Path) -> None:
         output=output_level_0,
         packages=[pkg_dir],
         entry_point=None,
-        compress=True,
+        compression="deflate",
         compression_level=0,
     )
 
@@ -210,7 +212,7 @@ def test_build_zipapp_compression_level_affects_size(tmp_path: Path) -> None:
         output=output_level_9,
         packages=[pkg_dir],
         entry_point=None,
-        compress=True,
+        compression="deflate",
         compression_level=9,
     )
 
@@ -229,3 +231,91 @@ def test_build_zipapp_compression_level_affects_size(tmp_path: Path) -> None:
         assert len(zf.namelist()) > 0
         for info in zf.infolist():
             assert info.compress_type == zipfile.ZIP_DEFLATED
+
+
+def test_build_zipapp_with_bzip2_compression(tmp_path: Path) -> None:
+    """Test building a zipapp with bzip2 compression."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
+
+    output = tmp_path / "app.pyz"
+
+    # Check if bzip2 is available
+    try:
+        import bz2  # noqa: F401, PLC0415  # pyright: ignore[reportUnusedImport]
+    except ImportError:
+        pytest.skip("bzip2 module not available")
+
+    if not hasattr(zipfile, "ZIP_BZIP2"):
+        pytest.skip("ZIP_BZIP2 not available in this Python version")
+
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=None,
+        compression="bzip2",
+    )
+
+    # Verify zip file was created
+    assert output.exists()
+
+    # Verify compression is bzip2
+    with zipfile.ZipFile(output, "r") as zf:
+        for info in zf.infolist():
+            assert info.compress_type == zipfile.ZIP_BZIP2
+
+
+def test_build_zipapp_with_lzma_compression(tmp_path: Path) -> None:
+    """Test building a zipapp with lzma compression."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
+
+    output = tmp_path / "app.pyz"
+
+    # Check if lzma is available
+    try:
+        import lzma  # noqa: F401, PLC0415  # pyright: ignore[reportUnusedImport]
+    except ImportError:
+        pytest.skip("lzma module not available")
+
+    if not hasattr(zipfile, "ZIP_LZMA"):
+        pytest.skip("ZIP_LZMA not available in this Python version")
+
+    mod_build.build_zipapp(
+        output=output,
+        packages=[pkg_dir],
+        entry_point=None,
+        compression="lzma",
+    )
+
+    # Verify zip file was created
+    assert output.exists()
+
+    # Verify compression is lzma
+    with zipfile.ZipFile(output, "r") as zf:
+        for info in zf.infolist():
+            assert info.compress_type == zipfile.ZIP_LZMA
+
+
+def test_build_zipapp_invalid_compression(tmp_path: Path) -> None:
+    """Test that invalid compression method raises ValueError."""
+    # Create a test package
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+
+    output = tmp_path / "app.pyz"
+
+    with pytest.raises(ValueError, match="Unknown compression method"):
+        mod_build.build_zipapp(
+            output=output,
+            packages=[pkg_dir],
+            entry_point=None,
+            compression="invalid",
+        )

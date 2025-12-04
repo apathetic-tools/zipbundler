@@ -62,7 +62,7 @@ def test_build_zipapp_dry_run_with_compression(tmp_path: Path) -> None:
         output=output,
         packages=[pkg_dir],
         entry_point=None,
-        compress=True,
+        compression="deflate",
         dry_run=True,
     )
 

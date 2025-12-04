@@ -44,7 +44,7 @@ def _is_archive_file(source: Path) -> bool:
     return False
 
 
-def handle_zipapp_style_command(args: argparse.Namespace) -> int:
+def handle_zipapp_style_command(args: argparse.Namespace) -> int:  # noqa: PLR0915
     """Handle zipapp-style CLI: zipbundler SOURCE [OPTIONS].
 
     This implements the zipapp-compatible interface where SOURCE can be:
@@ -116,6 +116,7 @@ def handle_zipapp_style_command(args: argparse.Namespace) -> int:
 
     # Extract compression
     compress = getattr(args, "compress", False)
+    compression = "deflate" if compress else "stored"
 
     # Build the zipapp
     try:
@@ -124,7 +125,7 @@ def handle_zipapp_style_command(args: argparse.Namespace) -> int:
             packages=packages,
             entry_point=entry_point_code,
             shebang=shebang,
-            compress=compress,
+            compression=compression,
         )
     except Exception:
         logger.exception("Failed to build zipapp")
