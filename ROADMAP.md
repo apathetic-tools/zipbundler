@@ -25,6 +25,7 @@ Some of these we just want to consider, and may not want to implement.
 - **Package Selection**: Configure which packages to include
 - **Output Path**: Configurable output directory and filename
 - **Entry Point Configuration**: Define entry points in config file
+- **Metadata Auto-Detection**: `init` command auto-detects metadata from `pyproject.toml` when creating config files ✅
 
 ### Phase 3: Advanced Features
 (No features currently planned)

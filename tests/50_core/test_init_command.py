@@ -211,3 +211,108 @@ def test_cli_init_command_invalid_preset(tmp_path: Path) -> None:
         assert not config_file.exists()
     finally:
         os.chdir(original_cwd)
+
+
+def test_cli_init_command_auto_detects_metadata_from_pyproject(tmp_path: Path) -> None:
+    """Test init command auto-detects metadata from pyproject.toml."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create pyproject.toml with metadata
+        pyproject_content = """[project]
+name = "test-package"
+version = "1.2.3"
+description = "A test package description"
+authors = [
+    {name = "Test Author"}
+]
+license = {text = "MIT"}
+"""
+        pyproject_file = tmp_path / "pyproject.toml"
+        pyproject_file.write_text(pyproject_content, encoding="utf-8")
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["init"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify config file was created
+        config_file = tmp_path / ".zipbundler.jsonc"
+        assert config_file.exists()
+
+        # Verify metadata was auto-detected and injected
+        content = config_file.read_text(encoding="utf-8")
+        assert '"metadata"' in content
+        assert '"display_name": "test-package"' in content
+        assert '"version": "1.2.3"' in content
+        assert '"description": "A test package description"' in content
+        assert '"author": "Test Author"' in content
+        assert '"license": "MIT"' in content
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_init_command_auto_detects_partial_metadata_from_pyproject(
+    tmp_path: Path,
+) -> None:
+    """Test init command auto-detects partial metadata from pyproject.toml."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create pyproject.toml with partial metadata
+        pyproject_content = """[project]
+name = "partial-package"
+version = "0.5.0"
+"""
+        pyproject_file = tmp_path / "pyproject.toml"
+        pyproject_file.write_text(pyproject_content, encoding="utf-8")
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["init"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify config file was created
+        config_file = tmp_path / ".zipbundler.jsonc"
+        assert config_file.exists()
+
+        # Verify partial metadata was auto-detected
+        content = config_file.read_text(encoding="utf-8")
+        assert '"metadata"' in content
+        assert '"display_name": "partial-package"' in content
+        assert '"version": "0.5.0"' in content
+        # Should not have description, author, or license
+        assert '"description"' not in content or '"description": null' in content
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_init_command_no_metadata_when_no_pyproject(tmp_path: Path) -> None:
+    """Test init command does not add metadata when pyproject.toml doesn't exist."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["init", "--preset", "basic"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify config file was created
+        config_file = tmp_path / ".zipbundler.jsonc"
+        assert config_file.exists()
+
+        # Verify metadata section is still commented (not auto-detected)
+        content = config_file.read_text(encoding="utf-8")
+        # For basic preset, metadata should be commented out
+        assert '// "metadata":' in content or '"metadata":' not in content
+    finally:
+        os.chdir(original_cwd)
