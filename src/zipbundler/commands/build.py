@@ -307,6 +307,11 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
 
         # Extract packages
         packages_list: list[str] = config.get("packages", [])
+
+        # CLI args override config
+        if hasattr(args, "packages") and args.packages:
+            packages_list = args.packages
+
         if not packages_list:
             logger.error("No packages specified in configuration")
             return 1

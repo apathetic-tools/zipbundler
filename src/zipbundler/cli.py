@@ -205,6 +205,11 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         help="Compression level for deflate method (0-9, overrides config)",
     )
     build_parser.add_argument(
+        "--packages",
+        nargs="+",
+        help="Package patterns to include (overrides config)",
+    )
+    build_parser.add_argument(
         "--exclude",
         nargs="+",
         help="Exclude patterns (overrides config)",
