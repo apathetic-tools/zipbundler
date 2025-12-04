@@ -268,6 +268,11 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         help="Preview what would be bundled without creating zip",
     )
     build_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force rebuild even if output is up-to-date",
+    )
+    build_parser.add_argument(
         "--strict",
         action="store_true",
         help="Fail on config validation warnings",

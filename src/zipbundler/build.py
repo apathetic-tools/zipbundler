@@ -122,7 +122,43 @@ def _get_compression_method(compression: str | None) -> tuple[int, str]:
     raise ValueError(msg)
 
 
-def build_zipapp(  # noqa: C901, PLR0912, PLR0915
+def _needs_rebuild(
+    output: Path,
+    source_files: list[tuple[Path, Path]],
+) -> bool:
+    """Check if rebuild is needed based on file modification times.
+
+    Args:
+        output: Output file path
+        source_files: List of tuples (file_path, arcname) for source files
+
+    Returns:
+        True if rebuild is needed, False if output is up-to-date
+
+    Note:
+        We don't check entry_point content here since it's a string, not a file.
+        If entry_point changes, the caller should force rebuild.
+        This is a limitation but acceptable for incremental builds.
+    """
+    # If output doesn't exist, rebuild is needed
+    if not output.exists():
+        return True
+
+    # Get output file modification time
+    output_mtime = output.stat().st_mtime
+
+    # Check if any source file is newer than output
+    for file_path, _arcname in source_files:
+        if not file_path.exists():
+            # File was deleted, rebuild needed
+            return True
+        if file_path.stat().st_mtime > output_mtime:
+            return True
+
+    return False
+
+
+def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     output: Path,
     packages: list[Path],
     entry_point: str | None = None,
@@ -134,6 +170,7 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0915
     exclude: list[str] | None = None,
     main_guard: bool = True,
     metadata: dict[str, str] | None = None,
+    force: bool = False,
 ) -> None:
     """Build a zipapp-compatible zip file.
 
@@ -156,6 +193,9 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0915
         metadata: Optional dictionary with metadata fields (display_name, description,
             version, author, license). If provided, a PKG-INFO file will be written
             to the zip archive.
+        force: If True, always rebuild even if output is up-to-date.
+            Defaults to False. When False, skips rebuild if output is newer
+            than all sources.
 
     Raises:
         ValueError: If output path is invalid or packages are empty
@@ -207,6 +247,16 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0915
 
     # Count entry point in file count if provided
     file_count = len(files_to_include) + (1 if entry_point is not None else 0)
+
+    # Incremental build check: skip if output is up-to-date
+    if (
+        not force
+        and not dry_run
+        and output.exists()
+        and not _needs_rebuild(output, files_to_include)
+    ):
+        logger.info("⏭️  Skipping rebuild: %s is up-to-date", output)
+        return
 
     # Dry-run mode: show summary and exit
     if dry_run:

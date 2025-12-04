@@ -172,6 +172,7 @@ def handle_zipapp_style_command(args: argparse.Namespace) -> int:  # noqa: C901,
             shebang=shebang,
             compression=compression,
             compression_level=compression_level,
+            force=getattr(args, "force", False),
         )
     except Exception:
         logger.exception("Failed to build zipapp")

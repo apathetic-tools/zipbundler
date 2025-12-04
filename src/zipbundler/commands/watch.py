@@ -43,6 +43,7 @@ def handle_watch_command(args: argparse.Namespace) -> int:
                 compression=compression,
                 exclude=args.exclude,
                 main_guard=getattr(args, "main_guard", True),
+                force=False,  # Watch handles change detection, use incremental builds
             )
 
         # Start watching

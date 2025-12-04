@@ -449,6 +449,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             main_guard=main_guard,
             dry_run=getattr(args, "dry_run", False),
             metadata=metadata,
+            force=getattr(args, "force", False),
         )
     except (FileNotFoundError, ValueError, TypeError) as e:
         logger.errorIfNotDebug(str(e))

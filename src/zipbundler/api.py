@@ -380,6 +380,7 @@ def build_zip(  # noqa: C901, PLR0912, PLR0913, PLR0915
         exclude=exclude,
         main_guard=main_guard,
         metadata=metadata,
+        force=False,  # API doesn't expose force, use default incremental behavior
     )
 
     # Calculate result

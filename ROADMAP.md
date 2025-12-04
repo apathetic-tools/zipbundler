@@ -14,10 +14,6 @@ Some of these we just want to consider, and may not want to implement.
 - **zipapp-Compatible Zip Creation**: Create `.pyz` files compatible with Python's `zipapp` module
 - **Flat Structure**: Preserve original package paths without transformations
 - **Import Support**: Ensure zip files are importable via `zipimport` and `importlib`
-- **zipapp-style CLI**: Support `python -m zipapp` compatible command-line interface with full feature parity:
-  - `-o, --output`: Output file path
-  - `-p, --python`: Shebang line (interpreter path)
-  - `-m, --main`: Main entry point (module:function or module)
 - **Basic CLI**: Simple command-line interface for bundling
 
 ### Phase 2: Configuration System
@@ -25,17 +21,6 @@ Some of these we just want to consider, and may not want to implement.
 - **Output Path**: Configurable output directory and filename ✅
 - **Entry Point Configuration**: Define entry points in config file ✅
 - **Metadata Auto-Detection**: `init` command auto-detects metadata from `pyproject.toml` when creating config files ✅
-
-### Phase 3: Advanced Features
-(No features currently planned)
-
-## 🧰 CLI Commands
-
-- **zipapp-style CLI** - Support `python -m zipapp` compatible interface:
-  - `zipbundler SOURCE -o OUTPUT` - Specify source and output
-  - `-p, --python SHEBANG` - Set shebang line (e.g., `"/usr/bin/env python3"`)
-  - `-m, --main ENTRY_POINT` - Set main entry point (e.g., `"myapp:main"`)
-  - Example: `zipbundler src/myapp -o app.pyz -p "/usr/bin/env python3" -m "myapp:main"`
 
 ## ⚙️ Configuration Features
 
@@ -82,6 +67,8 @@ Some of these we just want to consider, and may not want to implement.
 }
 ```
 
+## 🧰 CLI Commands
+
 ## 🔌 API Implementation
 
 - **Config Parser**: Parse and validate configuration files
@@ -116,7 +103,6 @@ Some of these we just want to consider, and may not want to implement.
 ## 💡 Future Ideas
 
 - **Multi-format Support**: Support other archive formats
-- **Incremental Builds**: Only rebuild changed files
 - **Plugin System**: Extensible architecture for custom handlers
 - **CI/CD Integration**: GitHub Actions, GitLab CI templates
 
