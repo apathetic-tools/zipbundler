@@ -31,10 +31,11 @@ def find_config(
       2. Default candidate files in current directory and parent directories:
          - .zipbundler.py
          - .zipbundler.jsonc
+         - .zipbundler.json
          - pyproject.toml
          Searches from cwd up to filesystem root, returning first match
          (closest to cwd).
-         Priority: .py > .jsonc > .toml
+         Priority: .py > .jsonc > .json > .toml
 
     Args:
         config_path: Explicit config path from CLI
@@ -64,6 +65,7 @@ def find_config(
     candidate_names = [
         ".zipbundler.py",
         ".zipbundler.jsonc",
+        ".zipbundler.json",
         "pyproject.toml",
     ]
     found: list[Path] = []
@@ -85,11 +87,11 @@ def find_config(
         return None
 
     # --- 3. Handle multiple matches at same level ---
-    # Prefer .zipbundler.py > .zipbundler.jsonc > pyproject.toml
+    # Prefer .zipbundler.py > .zipbundler.jsonc > .zipbundler.json > pyproject.toml
     if len(found) > 1:
-        # Prefer .py, then .jsonc, then .toml
-        priority = {".zipbundler.py": 0, ".zipbundler.jsonc": 1, "pyproject.toml": 2}
-        found_sorted = sorted(found, key=lambda p: priority.get(p.name, 99))
+        # Prefer .py, then .jsonc, then .json, then .toml
+        priority = {".py": 0, ".jsonc": 1, ".json": 2, ".toml": 3}
+        found_sorted = sorted(found, key=lambda p: priority.get(p.suffix, 99))
         names = ", ".join(p.name for p in found_sorted)
         logger.warning(
             "Multiple config files detected (%s); using %s.",
@@ -102,9 +104,9 @@ def find_config(
 
 
 def _load_jsonc_config(config_path: Path) -> dict[str, Any]:
-    """Load JSONC configuration file."""
+    """Load JSON/JSONC configuration file."""
     logger = getAppLogger()
-    logger.trace(f"[load_config] Loading JSONC from {config_path}")
+    logger.trace(f"[load_config] Loading JSON/JSONC from {config_path}")
 
     try:
         config = load_jsonc(config_path)
@@ -195,7 +197,7 @@ def load_config(config_path: Path) -> dict[str, Any] | None:
 
     Supports:
       - Python configs: .py files exporting `config`
-      - JSON/JSONC configs: .jsonc files
+      - JSON/JSONC configs: .json, .jsonc files
       - TOML configs: pyproject.toml with [tool.zipbundler] section
 
     Returns:
@@ -208,6 +210,8 @@ def load_config(config_path: Path) -> dict[str, Any] | None:
     if config_path.suffix == ".py" or config_path.name == ".zipbundler.py":
         return _load_python_config(config_path)
     if config_path.suffix == ".jsonc" or config_path.name == ".zipbundler.jsonc":
+        return _load_jsonc_config(config_path)
+    if config_path.suffix == ".json" or config_path.name == ".zipbundler.json":
         return _load_jsonc_config(config_path)
     if config_path.suffix == ".toml" or config_path.name == "pyproject.toml":
         return _load_toml_config(config_path)
