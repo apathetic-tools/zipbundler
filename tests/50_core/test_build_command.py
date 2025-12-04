@@ -435,3 +435,101 @@ def test_cli_build_command_config_shebang_false(tmp_path: Path) -> None:
         assert not content.startswith(b"#!/")
     finally:
         os.chdir(original_cwd)
+
+
+def test_cli_build_command_compression_level(tmp_path: Path) -> None:
+    """Test build command with --compression-level CLI option."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create a package structure with content that compresses well
+        src_dir = tmp_path / "src" / "mypackage"
+        src_dir.mkdir(parents=True)
+        (src_dir / "__init__.py").write_text("")
+        # Create a file with repetitive content
+        content = "def func():\n    " + "x" * 1000 + "\n    pass\n"
+        (src_dir / "module.py").write_text(content)
+
+        # Create config file with compression but no compression_level
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/mypackage/**/*.py"],
+  "output": {
+    "path": "dist/bundle.zip"
+  },
+  "options": {
+    "compression": "deflate"
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["build", "--compression-level", "9"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify zip file was created
+        output_file = tmp_path / "dist" / "bundle.zip"
+        assert output_file.exists()
+
+        # Verify compression is enabled with deflate
+        with zipfile.ZipFile(output_file, "r") as zf:
+            for info in zf.infolist():
+                assert info.compress_type == zipfile.ZIP_DEFLATED
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_build_command_compression_level_override_config(tmp_path: Path) -> None:
+    """Test that --compression-level CLI option overrides config."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create a package structure
+        src_dir = tmp_path / "src" / "mypackage"
+        src_dir.mkdir(parents=True)
+        (src_dir / "__init__.py").write_text("")
+        (src_dir / "module.py").write_text("def func():\n    pass\n")
+
+        # Create config file with compression_level set to 1
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/mypackage/**/*.py"],
+  "output": {
+    "path": "dist/bundle.zip"
+  },
+  "options": {
+    "compression": "deflate",
+    "compression_level": 1
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        # Override with CLI option
+        code = main_func(["build", "--compression-level", "9"])
+
+        # Verify exit code is 0
+        assert code == 0
+
+        # Verify zip file was created
+        output_file = tmp_path / "dist" / "bundle.zip"
+        assert output_file.exists()
+
+        # Verify compression is enabled
+        with zipfile.ZipFile(output_file, "r") as zf:
+            for info in zf.infolist():
+                assert info.compress_type == zipfile.ZIP_DEFLATED
+    finally:
+        os.chdir(original_cwd)

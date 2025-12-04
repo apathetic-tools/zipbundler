@@ -422,6 +422,11 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         if hasattr(args, "compress") and args.compress is not None:
             # CLI --compress flag: True -> "deflate", False -> "stored"
             compression = "deflate" if args.compress else "stored"
+        if hasattr(args, "compression_level") and args.compression_level is not None:
+            compression_level = args.compression_level
+            # compression_level only applies to deflate, ensure compression is deflate
+            if compression != "deflate":
+                compression = "deflate"
         if hasattr(args, "exclude") and args.exclude:
             exclude = args.exclude
         if hasattr(args, "main_guard") and args.main_guard is not None:
