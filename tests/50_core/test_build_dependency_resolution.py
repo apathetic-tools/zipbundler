@@ -91,7 +91,7 @@ def test_cli_build_command_with_installed_package(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0

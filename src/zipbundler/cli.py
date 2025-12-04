@@ -70,35 +70,29 @@ class HintingArgumentParser(argparse.ArgumentParser):
         self.exit(2, full + "\n")
 
 
-def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
-    """Define and return the CLI argument parser."""
+def _setup_parser() -> argparse.ArgumentParser:
+    """Define and return the CLI argument parser (zipapp-style only)."""
     parser = HintingArgumentParser(
         prog=PROGRAM_SCRIPT,
         description="Bundle your packages into a runnable, importable zip",
     )
 
-    # --- Version and verbosity (before subparsers) ---
+    # Version flag
     parser.add_argument("--version", action="store_true", help="Show version info.")
 
-    # --- zipapp-style --info flag ---
+    # zipapp-style options (matching python -m zipapp interface)
     parser.add_argument(
-        "--info",
-        action="store_true",
-        help="Display the interpreter from an existing archive",
-    )
-
-    # --- zipapp-style options (for zipapp-compatible interface) ---
-    # Note: source is handled manually when no subcommand is provided
-    parser.add_argument(
-        "-o",
         "--output",
-        help="Output file path (required for zipapp-style usage)",
+        "-o",
+        default=None,
+        help="The name of the output archive. Required if SOURCE is an archive.",
     )
     parser.add_argument(
-        "-p",
         "--python",
+        "-p",
         dest="shebang",
-        help="Shebang line (interpreter path, e.g., '/usr/bin/env python3')",
+        default=None,
+        help="The name of the Python interpreter to use (default: no shebang line).",
     )
     parser.add_argument(
         "--no-shebang",
@@ -107,16 +101,30 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         help="Disable shebang insertion",
     )
     parser.add_argument(
-        "-m",
         "--main",
+        "-m",
         dest="entry_point",
-        help="Main entry point (module:function or module)",
+        default=None,
+        help=(
+            "The main function of the application "
+            "(default: use an existing __main__.py)."
+        ),
     )
     parser.add_argument(
-        "-c",
         "--compress",
+        "-c",
         action="store_true",
-        help="Compress the zip file",
+        help=(
+            "Compress files with the deflate method. "
+            "Files are stored uncompressed by default."
+        ),
+    )
+    parser.add_argument(
+        "--build-no-compress",
+        action="store_false",
+        dest="build_compress",
+        default=None,
+        help="Do not compress the zip file (for --build, overrides config)",
     )
     parser.add_argument(
         "--compression-level",
@@ -124,339 +132,159 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         dest="compression_level",
         help="Compression level for deflate method (0-9, only used with --compress)",
     )
-
-    subparsers = parser.add_subparsers(
-        dest="command", help="Command to run", required=False
+    parser.add_argument(
+        "--info",
+        default=False,
+        action="store_true",
+        help="Display the interpreter from the archive.",
     )
-    # Note: subparsers are not required to support zipapp-style usage
 
-    # Init command
-    init_parser = subparsers.add_parser(
-        "init",
-        help="Create a default .zipbundler.jsonc config file",
+    # Command flags (take over execution like --info and --version)
+    parser.add_argument(
+        "--init",
+        action="store_true",
+        help="Create a default .zipbundler.jsonc config file.",
     )
-    init_parser.add_argument(
-        "-o",
-        "--output",
+    parser.add_argument(
+        "--build",
+        action="store_true",
+        help="Build zip from current directory or config file.",
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List packages and files that would be included in the bundle.",
+    )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Validate configuration file.",
+    )
+    parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Watch for changes and rebuild automatically.",
+    )
+
+    # Arguments for command flags
+    # --init arguments
+    parser.add_argument(
+        "--init-output",
         help="Output path for config file (default: .zipbundler.jsonc)",
     )
-    init_parser.add_argument(
-        "--force",
+    parser.add_argument(
+        "--init-force",
         action="store_true",
-        help="Overwrite existing config file",
+        help="Overwrite existing config file (for --init).",
     )
-    init_parser.add_argument(
-        "--preset",
+    parser.add_argument(
+        "--init-preset",
         default="basic",
-        help="Use a preset template: basic, cli, library, or minimal (default: basic)",
-    )
-    init_parser.add_argument(
-        "--list-presets",
-        action="store_true",
-        dest="list_presets",
-        help="List available preset templates",
-    )
-
-    # Add log level options to init parser
-    log_level_init = init_parser.add_mutually_exclusive_group()
-    log_level_init.add_argument(
-        "-q",
-        "--quiet",
-        action="store_const",
-        const="warning",
-        dest="log_level",
-        help="Suppress non-critical output (same as --log-level warning).",
-    )
-    log_level_init.add_argument(
-        "-v",
-        "--verbose",
-        action="store_const",
-        const="debug",
-        dest="log_level",
-        help="Verbose output (same as --log-level debug).",
-    )
-    log_level_init.add_argument(
-        "--log-level",
-        choices=LEVEL_ORDER,
-        default=None,
-        dest="log_level",
-        help="Set log verbosity level.",
-    )
-
-    # Build command
-    build_parser = subparsers.add_parser(
-        "build",
-        help="Build zip from current directory or config",
-    )
-    build_parser.add_argument(
-        "-c",
-        "--config",
         help=(
-            "Path to configuration file "
-            "(default: .zipbundler.py, .zipbundler.jsonc, or pyproject.toml)"
+            "Use a preset template: basic, cli, library, or minimal "
+            "(for --init, default: basic)"
         ),
     )
-    build_parser.add_argument(
-        "-o",
-        "--output",
-        help="Output file path (overrides config)",
+    parser.add_argument(
+        "--init-list-presets",
+        action="store_true",
+        help="List available preset templates (for --init).",
     )
-    build_parser.add_argument(
-        "-m",
-        "--main",
-        dest="entry_point",
-        help="Entry point (module:function or module, overrides config)",
+
+    # --build arguments
+    parser.add_argument(
+        "--build-config",
+        help="Path to configuration file (for --build)",
     )
-    build_parser.add_argument(
-        "-p",
-        "--python",
-        dest="shebang",
-        help="Shebang line (overrides config)",
+    parser.add_argument(
+        "--build-packages",
+        nargs="+",
+        help="Package patterns to include (for --build, overrides config)",
     )
-    build_parser.add_argument(
-        "--no-shebang",
+    parser.add_argument(
+        "--build-exclude",
+        nargs="+",
+        help="Exclude patterns (for --build, overrides config)",
+    )
+    parser.add_argument(
+        "--build-main-guard",
+        action="store_true",
+        default=None,
+        help="Wrap entry point in main guard (for --build, overrides config)",
+    )
+    parser.add_argument(
+        "--build-no-main-guard",
         action="store_false",
-        dest="shebang",
-        help="Disable shebang insertion (overrides config)",
+        dest="build_main_guard",
+        help="Do not wrap entry point in main guard (for --build)",
     )
-    build_parser.add_argument(
-        "--compress",
+    parser.add_argument(
+        "--build-dry-run",
         action="store_true",
-        help="Compress the zip file (overrides config)",
+        help="Preview what would be bundled without creating zip (for --build)",
     )
-    build_parser.add_argument(
-        "--no-compress",
-        action="store_false",
-        dest="compress",
-        help="Do not compress the zip file (overrides config)",
-    )
-    build_parser.add_argument(
-        "--compression-level",
-        type=int,
-        dest="compression_level",
-        help="Compression level for deflate method (0-9, overrides config)",
-    )
-    build_parser.add_argument(
-        "--packages",
-        nargs="+",
-        help="Package patterns to include (overrides config)",
-    )
-    build_parser.add_argument(
-        "--exclude",
-        nargs="+",
-        help="Exclude patterns (overrides config)",
-    )
-    build_parser.add_argument(
-        "--main-guard",
+    parser.add_argument(
+        "--build-force",
         action="store_true",
-        default=None,
-        dest="main_guard",
-        help=(
-            "Wrap entry point in 'if __name__ == \"__main__\":' guard "
-            "(overrides config)"
-        ),
+        help="Force rebuild even if output is up-to-date (for --build)",
     )
-    build_parser.add_argument(
-        "--no-main-guard",
-        action="store_false",
-        dest="main_guard",
-        help="Do not wrap entry point in main guard (overrides config)",
-    )
-    build_parser.add_argument(
-        "--dry-run",
+    parser.add_argument(
+        "--build-strict",
         action="store_true",
-        help="Preview what would be bundled without creating zip",
-    )
-    build_parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Force rebuild even if output is up-to-date",
-    )
-    build_parser.add_argument(
-        "--strict",
-        action="store_true",
-        help="Fail on config validation warnings",
+        help="Fail on config validation warnings (for --build)",
     )
 
-    # Add log level options to build parser
-    log_level_build = build_parser.add_mutually_exclusive_group()
-    log_level_build.add_argument(
-        "-q",
-        "--quiet",
-        action="store_const",
-        const="warning",
-        dest="log_level",
-        help="Suppress non-critical output (same as --log-level warning).",
-    )
-    log_level_build.add_argument(
-        "-v",
-        "--verbose",
-        action="store_const",
-        const="debug",
-        dest="log_level",
-        help="Verbose output (same as --log-level debug).",
-    )
-    log_level_build.add_argument(
-        "--log-level",
-        choices=LEVEL_ORDER,
-        default=None,
-        dest="log_level",
-        help="Set log verbosity level.",
-    )
-
-    # List command
-    list_parser = subparsers.add_parser(
-        "list",
-        help="List packages and files that would be included in the bundle",
-    )
-    list_parser.add_argument(
-        "source",
-        nargs="+",
-        help="Source package directories to list",
-    )
-    list_parser.add_argument(
-        "--tree",
+    # --list arguments
+    parser.add_argument(
+        "--list-tree",
         action="store_true",
-        help="Show as directory tree",
+        help="Show as directory tree (for --list)",
     )
-    list_parser.add_argument(
-        "--count",
+    parser.add_argument(
+        "--list-count",
         action="store_true",
-        help="Show file count only",
+        help="Show file count only (for --list)",
     )
 
-    # Add log level options to list parser
-    log_level_list = list_parser.add_mutually_exclusive_group()
-    log_level_list.add_argument(
-        "-q",
-        "--quiet",
-        action="store_const",
-        const="warning",
-        dest="log_level",
-        help="Suppress non-critical output (same as --log-level warning).",
+    # --validate arguments
+    parser.add_argument(
+        "--validate-config",
+        help="Path to configuration file (for --validate)",
     )
-    log_level_list.add_argument(
-        "-v",
-        "--verbose",
-        action="store_const",
-        const="debug",
-        dest="log_level",
-        help="Verbose output (same as --log-level debug).",
-    )
-    log_level_list.add_argument(
-        "--log-level",
-        choices=LEVEL_ORDER,
-        default=None,
-        dest="log_level",
-        help="Set log verbosity level.",
-    )
-
-    # Validate command
-    validate_parser = subparsers.add_parser(
-        "validate",
-        help="Validate configuration file",
-    )
-    validate_parser.add_argument(
-        "-c",
-        "--config",
-        help=(
-            "Path to configuration file "
-            "(default: .zipbundler.py, .zipbundler.jsonc, or pyproject.toml)"
-        ),
-    )
-    validate_parser.add_argument(
-        "--strict",
+    parser.add_argument(
+        "--validate-strict",
         action="store_true",
-        help="Fail on warnings",
+        help="Fail on warnings (for --validate)",
     )
 
-    # Add log level options to validate parser
-    log_level_validate = validate_parser.add_mutually_exclusive_group()
-    log_level_validate.add_argument(
-        "-q",
-        "--quiet",
-        action="store_const",
-        const="warning",
-        dest="log_level",
-        help="Suppress non-critical output (same as --log-level warning).",
-    )
-    log_level_validate.add_argument(
-        "-v",
-        "--verbose",
-        action="store_const",
-        const="debug",
-        dest="log_level",
-        help="Verbose output (same as --log-level debug).",
-    )
-    log_level_validate.add_argument(
-        "--log-level",
-        choices=LEVEL_ORDER,
-        default=None,
-        dest="log_level",
-        help="Set log verbosity level.",
-    )
-
-    # Watch command
-    watch_parser = subparsers.add_parser(
-        "watch",
-        help="Watch for changes and rebuild automatically",
-    )
-    watch_parser.add_argument(
-        "source",
-        nargs="+",
-        help="Source package directories to watch",
-    )
-    watch_parser.add_argument(
-        "-o",
-        "--output",
-        required=True,
-        help="Output file path for the zipapp",
-    )
-    watch_parser.add_argument(
-        "-m",
-        "--main",
-        dest="entry_point",
-        help="Entry point (module:function or module)",
-    )
-    watch_parser.add_argument(
-        "-p",
-        "--python",
-        dest="shebang",
-        help="Shebang line (interpreter path)",
-    )
-    watch_parser.add_argument(
-        "--compress",
-        action="store_true",
-        help="Compress the zip file",
-    )
-    watch_parser.add_argument(
-        "--exclude",
-        nargs="+",
-        help="Exclude patterns (glob patterns)",
-    )
-    watch_parser.add_argument(
-        "--interval",
+    # --watch arguments
+    parser.add_argument(
+        "--watch-interval",
         type=float,
         default=None,
-        help="Watch interval in seconds (default: 1.0)",
+        help="Watch interval in seconds (for --watch, default: 1.0)",
     )
-    watch_parser.add_argument(
-        "--main-guard",
+    parser.add_argument(
+        "--watch-exclude",
+        nargs="+",
+        help="Exclude patterns for watch (for --watch)",
+    )
+    parser.add_argument(
+        "--watch-main-guard",
         action="store_true",
         default=True,
-        dest="main_guard",
-        help="Wrap entry point in 'if __name__ == \"__main__\":' guard (default: True)",
+        help="Wrap entry point in main guard (for --watch, default: True)",
     )
-    watch_parser.add_argument(
-        "--no-main-guard",
+    parser.add_argument(
+        "--watch-no-main-guard",
         action="store_false",
-        dest="main_guard",
-        help="Do not wrap entry point in main guard",
+        dest="watch_main_guard",
+        help="Do not wrap entry point in main guard (for --watch)",
     )
 
-    # Add log level options to watch parser
-    log_level_watch = watch_parser.add_mutually_exclusive_group()
-    log_level_watch.add_argument(
+    # Log level options
+    log_level_group = parser.add_mutually_exclusive_group()
+    log_level_group.add_argument(
         "-q",
         "--quiet",
         action="store_const",
@@ -464,7 +292,7 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         dest="log_level",
         help="Suppress non-critical output (same as --log-level warning).",
     )
-    log_level_watch.add_argument(
+    log_level_group.add_argument(
         "-v",
         "--verbose",
         action="store_const",
@@ -472,81 +300,107 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         dest="log_level",
         help="Verbose output (same as --log-level debug).",
     )
-    log_level_watch.add_argument(
+    log_level_group.add_argument(
         "--log-level",
         choices=LEVEL_ORDER,
         default=None,
         dest="log_level",
         help="Set log verbosity level.",
+    )
+
+    # Source positional argument (like zipapp)
+    # Use nargs="*" to support multiple sources for --list and --watch
+    parser.add_argument(
+        "source",
+        nargs="*",
+        help="Source directory (or existing archive).",
     )
 
     return parser
 
 
-def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915
-    """Main entry point for the zipbundler CLI."""
+def _prepare_init_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
+    """Prepare arguments for init command."""
+    init_args = argparse.Namespace()
+    init_args.output = parsed_args.init_output
+    init_args.force = parsed_args.init_force
+    init_args.preset = parsed_args.init_preset
+    init_args.list_presets = parsed_args.init_list_presets
+    init_args.log_level = parsed_args.log_level
+    return init_args
+
+
+def _prepare_build_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
+    """Prepare arguments for build command."""
+    build_args = argparse.Namespace()
+    build_args.config = parsed_args.build_config
+    build_args.output = parsed_args.output
+    build_args.entry_point = parsed_args.entry_point
+    build_args.shebang = parsed_args.shebang
+    # Handle compress: use --build-no-compress if set, otherwise use --compress
+    # --build-no-compress takes precedence over --compress
+    if parsed_args.build_compress is False:
+        # --build-no-compress was explicitly set
+        build_args.compress = False
+    elif parsed_args.compress:
+        # --compress was set
+        build_args.compress = True
+    else:
+        # Neither flag was set, let config file decide
+        build_args.compress = None
+    build_args.compression_level = parsed_args.compression_level
+    build_args.packages = parsed_args.build_packages
+    build_args.exclude = parsed_args.build_exclude
+    build_args.main_guard = parsed_args.build_main_guard
+    build_args.dry_run = parsed_args.build_dry_run
+    build_args.force = parsed_args.build_force
+    build_args.strict = parsed_args.build_strict
+    build_args.log_level = parsed_args.log_level
+    return build_args
+
+
+def _prepare_list_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
+    """Prepare arguments for list command."""
+    list_args = argparse.Namespace()
+    # Source is now always a list from nargs="*"
+    list_args.source = parsed_args.source if parsed_args.source else []
+    list_args.tree = parsed_args.list_tree
+    list_args.count = parsed_args.list_count
+    list_args.log_level = parsed_args.log_level
+    return list_args
+
+
+def _prepare_validate_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
+    """Prepare arguments for validate command."""
+    validate_args = argparse.Namespace()
+    validate_args.config = parsed_args.validate_config
+    validate_args.strict = parsed_args.validate_strict
+    validate_args.log_level = parsed_args.log_level
+    return validate_args
+
+
+def _prepare_watch_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
+    """Prepare arguments for watch command."""
+    watch_args = argparse.Namespace()
+    # Source is now always a list from nargs="*"
+    watch_args.source = parsed_args.source if parsed_args.source else []
+    watch_args.output = parsed_args.output
+    watch_args.entry_point = parsed_args.entry_point
+    watch_args.shebang = parsed_args.shebang
+    watch_args.compress = parsed_args.compress
+    watch_args.exclude = parsed_args.watch_exclude
+    watch_args.interval = parsed_args.watch_interval
+    watch_args.main_guard = parsed_args.watch_main_guard
+    watch_args.log_level = parsed_args.log_level
+    return watch_args
+
+
+def main(args: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
+    """Main entry point for the zipbundler CLI (zipapp-style only)."""
     logger = getAppLogger()
 
     parser = _setup_parser()
-
-    # --- Handle --info flag early (before subcommand parsing) ---
-    # This avoids conflicts with subcommand parsing
-    if args and "--info" in args:
-        # Extract source from args (everything that's not a flag and not a command)
-        source: str | None = None
-        filtered_args: list[str] = []
-        commands = {"init", "list", "validate", "watch"}
-        for arg in args:
-            if arg == "--info" or arg.startswith("-"):
-                filtered_args.append(arg)
-            elif arg not in commands:
-                # This is likely the source path
-                if source is None:
-                    source = arg
-                # Don't add it to filtered_args to avoid subcommand conflict
-            else:
-                # It's a command, don't process as --info
-                filtered_args.append(arg)
-        # Parse known args to get --info flag and other flags (without source)
-        parsed_args, _remaining = parser.parse_known_args(filtered_args)
-        # Initialize logger with CLI args
-        resolved_log_level = logger.determineLogLevel(args=parsed_args)
-        logger.setLevel(resolved_log_level)
-        # Handle early exits
-        early_exit_code = _handle_early_exits(parsed_args)
-        if early_exit_code is not None:
-            return early_exit_code
-        # Handle --info with extracted source
-        return handle_info_command(source, parser)
-
-    # Check if first argument is a known subcommand
-    # If not, it might be a source path for zipapp-style usage
-    known_commands = {"init", "build", "list", "validate", "watch"}
-    first_arg_is_command = args and len(args) > 0 and args[0] in known_commands
-
-    # Use parse_known_args to handle potential conflicts between source and subcommands
-    try:
-        parsed_args, remaining = parser.parse_known_args(args)
-    except SystemExit:
-        # If argparse failed because it tried to match first arg as subcommand,
-        # and it's not a known command, treat it as zipapp-style source
-        if not first_arg_is_command and args and len(args) > 0:
-            # Create a minimal namespace and treat first arg as source
-            parsed_args = argparse.Namespace()
-            parsed_args.command = None
-            parsed_args.version = False
-            parsed_args.info = False
-            parsed_args.output = None
-            parsed_args.shebang = None
-            parsed_args.entry_point = None
-            parsed_args.compress = False
-            parsed_args.compression_level = None
-            # Parse known args without the first argument (treating it as source)
-            parsed_args, remaining = parser.parse_known_args(args[1:])
-            # Add first arg to remaining to be treated as source
-            remaining = [args[0], *remaining]
-        else:
-            raise
+    parsed_args = parser.parse_args(args)
 
     # Initialize logger with CLI args
     resolved_log_level = logger.determineLogLevel(args=parsed_args)
@@ -557,35 +411,64 @@ def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
     if early_exit_code is not None:
         return early_exit_code
 
-    # --- Handle subcommands ---
-    if parsed_args.command == "build":
-        return handle_build_command(parsed_args)
-    if parsed_args.command == "init":
-        return handle_init_command(parsed_args)
-    if parsed_args.command == "list":
-        return handle_list_command(parsed_args)
-    if parsed_args.command == "validate":
-        return handle_validate_command(parsed_args)
-    if parsed_args.command == "watch":
-        return handle_watch_command(parsed_args)
+    # --- Handle command flags (take over execution) ---
+    # These are handled in priority order
 
-    # No command provided - check for zipapp-style usage
-    # Extract source from remaining args (first non-flag argument)
-    source_arg: str | None = None
-    for arg in remaining:
-        if not arg.startswith("-"):
-            source_arg = arg
-            break
+    if parsed_args.init:
+        return handle_init_command(_prepare_init_args(parsed_args))
 
-    if not source_arg:
-        parser.error("No command specified. Use --help for usage.")
-        return 1  # pragma: no cover
+    if parsed_args.build:
+        return handle_build_command(_prepare_build_args(parsed_args))
 
-    # Set source on parsed_args for zipapp-style handler
-    parsed_args.source = source_arg
+    if parsed_args.list:
+        if not parsed_args.source:
+            parser.error("SOURCE is required for --list")
+            return 1  # pragma: no cover (parser.error raises SystemExit)
+        return handle_list_command(_prepare_list_args(parsed_args))
 
-    # SOURCE provided but no --info - this is zipapp-style building
-    return handle_zipapp_style_command(parsed_args)
+    if parsed_args.validate:
+        return handle_validate_command(_prepare_validate_args(parsed_args))
+
+    if parsed_args.watch:
+        if not parsed_args.source:
+            parser.error("SOURCE is required for --watch")
+            return 1  # pragma: no cover (parser.error raises SystemExit)
+        if not parsed_args.output:
+            parser.error("Output file (-o/--output) is required for --watch")
+            return 1  # pragma: no cover (parser.error raises SystemExit)
+        return handle_watch_command(_prepare_watch_args(parsed_args))
+
+    # --- Handle --info flag ---
+    if parsed_args.info:
+        if not parsed_args.source:
+            parser.error("SOURCE is required for --info")
+            return 1  # pragma: no cover (parser.error raises SystemExit)
+        # Info command expects a single source (first one)
+        # Source is always a list from nargs="*"
+        source = parsed_args.source[0]
+        return handle_info_command(source, parser)
+
+    # --- Handle zipapp-style building (default) ---
+    if not parsed_args.source:
+        parser.error("SOURCE is required")
+        return 1  # pragma: no cover (parser.error raises SystemExit)
+
+    # Validate zipapp-style requirements
+    if not parsed_args.output:
+        logger.error("Output file (-o/--output) is required when using SOURCE")
+        return 1
+
+    # Zipapp-style expects a single source (take first from list)
+    if len(parsed_args.source) > 1:
+        logger.error("Only one SOURCE is allowed for zipapp-style building")
+        return 1
+
+    # Create a modified args object with single source string
+    zipapp_args = argparse.Namespace(**vars(parsed_args))
+    zipapp_args.source = parsed_args.source[0]
+
+    # This is zipapp-style building
+    return handle_zipapp_style_command(zipapp_args)
 
 
 if __name__ == "__main__":

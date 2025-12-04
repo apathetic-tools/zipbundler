@@ -16,7 +16,7 @@ def test_cli_init_command_creates_file(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init"])
+        code = main_func(["--init"])
 
         # Verify exit code is 0
         assert code == 0
@@ -41,7 +41,7 @@ def test_cli_init_command_custom_output(tmp_path: Path) -> None:
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["init", "-o", str(custom_path)])
+    code = main_func(["--init", "--init-output", str(custom_path)])
 
     # Verify exit code is 0
     assert code == 0
@@ -66,7 +66,7 @@ def test_cli_init_command_existing_file(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init"])
+        code = main_func(["--init"])
 
         # Verify exit code is 1 (error)
         assert code == 1
@@ -89,7 +89,7 @@ def test_cli_init_command_force_overwrite(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init", "--force"])
+        code = main_func(["--init", "--init-force"])
 
         # Verify exit code is 0
         assert code == 0
@@ -110,7 +110,7 @@ def test_cli_init_command_with_cli_preset(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init", "--preset", "cli"])
+        code = main_func(["--init", "--init-preset", "cli"])
 
         # Verify exit code is 0
         assert code == 0
@@ -136,7 +136,7 @@ def test_cli_init_command_with_library_preset(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init", "--preset", "library"])
+        code = main_func(["--init", "--init-preset", "library"])
 
         # Verify exit code is 0
         assert code == 0
@@ -162,7 +162,7 @@ def test_cli_init_command_with_minimal_preset(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init", "--preset", "minimal"])
+        code = main_func(["--init", "--init-preset", "minimal"])
 
         # Verify exit code is 0
         assert code == 0
@@ -187,7 +187,7 @@ def test_cli_init_command_list_presets() -> None:
     """Test init command --list-presets flag."""
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["init", "--list-presets"])
+    code = main_func(["--init", "--init-list-presets"])
 
     # Verify exit code is 0
     assert code == 0
@@ -201,7 +201,7 @@ def test_cli_init_command_invalid_preset(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init", "--preset", "invalid"])
+        code = main_func(["--init", "--init-preset", "invalid"])
 
         # Verify exit code is 1 (error)
         assert code == 1
@@ -234,7 +234,7 @@ license = {text = "MIT"}
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init"])
+        code = main_func(["--init"])
 
         # Verify exit code is 0
         assert code == 0
@@ -273,7 +273,7 @@ version = "0.5.0"
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init"])
+        code = main_func(["--init"])
 
         # Verify exit code is 0
         assert code == 0
@@ -301,7 +301,7 @@ def test_cli_init_command_no_metadata_when_no_pyproject(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init", "--preset", "basic"])
+        code = main_func(["--init", "--init-preset", "basic"])
 
         # Verify exit code is 0
         assert code == 0
@@ -338,7 +338,7 @@ test-cli = "my_package.__main__:main"
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init"])
+        code = main_func(["--init"])
 
         # Verify exit code is 0
         assert code == 0
@@ -375,7 +375,7 @@ test-cli = "my_package"
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init"])
+        code = main_func(["--init"])
 
         # Verify exit code is 0
         assert code == 0
@@ -408,7 +408,7 @@ version = "1.0.0"
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init", "--preset", "basic"])
+        code = main_func(["--init", "--init-preset", "basic"])
 
         # Verify exit code is 0
         assert code == 0
@@ -447,7 +447,7 @@ test-cli = "my_package.__main__:main"
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["init"])
+        code = main_func(["--init"])
 
         # Verify exit code is 0
         assert code == 0

@@ -146,7 +146,7 @@ def test_cli_watch_command_basic(tmp_path: Path) -> None:
     with patch("zipbundler.actions.time.sleep", side_effect=KeyboardInterrupt()):
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["watch", str(pkg_dir), "-o", str(output)])
+        code = main_func(["--watch", str(pkg_dir), "-o", str(output)])
 
     # Should return 0 (KeyboardInterrupt is handled gracefully)
     assert code == 0
@@ -158,7 +158,7 @@ def test_cli_watch_command_no_source() -> None:
     main_func = mod_main if callable(mod_main) else mod_main.main
     # argparse raises SystemExit when required arguments are missing
     with pytest.raises(SystemExit) as exc_info:
-        main_func(["watch"])
+        main_func(["--watch"])
 
     # Should exit with error code 2 (argparse error)
     assert exc_info.value.code == ARGPARSE_ERROR_EXIT_CODE
@@ -175,7 +175,7 @@ def test_cli_watch_command_no_output(tmp_path: Path) -> None:
     main_func = mod_main if callable(mod_main) else mod_main.main
     # argparse raises SystemExit when required arguments are missing
     with pytest.raises(SystemExit) as exc_info:
-        main_func(["watch", str(pkg_dir)])
+        main_func(["--watch", str(pkg_dir)])
 
     # Should exit with error code 2 (argparse error)
     assert exc_info.value.code == ARGPARSE_ERROR_EXIT_CODE
@@ -196,14 +196,14 @@ def test_cli_watch_command_with_options(tmp_path: Path) -> None:
         main_func = mod_main if callable(mod_main) else mod_main.main
         code = main_func(
             [
-                "watch",
+                "--watch",
                 str(pkg_dir),
                 "-o",
                 str(output),
                 "--compress",
-                "--interval",
+                "--watch-interval",
                 str(WATCH_INTERVAL_TEST),
-                "--exclude",
+                "--watch-exclude",
                 "**/tests/**",
             ]
         )

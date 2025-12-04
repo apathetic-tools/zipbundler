@@ -35,7 +35,7 @@ def test_cli_build_command_basic(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0
@@ -63,7 +63,7 @@ def test_cli_build_command_no_config(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 1 (error - no config found)
         assert code == 1
@@ -99,7 +99,7 @@ def test_cli_build_command_with_entry_point(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0
@@ -152,7 +152,7 @@ def test_cli_build_command_with_exclude(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0
@@ -198,7 +198,7 @@ def test_cli_build_command_cli_override_output(tmp_path: Path) -> None:
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
         custom_output = tmp_path / "custom.zip"
-        code = main_func(["build", "-o", str(custom_output)])
+        code = main_func(["--build", "-o", str(custom_output)])
 
         # Verify exit code is 0
         assert code == 0
@@ -237,7 +237,7 @@ def test_cli_build_command_output_name_generates_path(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0
@@ -284,7 +284,7 @@ def test_cli_build_command_output_name_ignored_with_path(
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0
@@ -327,7 +327,7 @@ def test_cli_build_command_output_directory(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0
@@ -375,7 +375,7 @@ def test_cli_build_command_output_directory_only(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0
@@ -412,7 +412,7 @@ def test_cli_build_command_invalid_config(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 1 (error - validation failed)
         assert code == 1
@@ -441,7 +441,7 @@ def test_cli_build_command_no_packages_resolved(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 1 (error - no packages resolved)
         assert code == 1
@@ -475,7 +475,7 @@ def test_cli_build_command_dry_run(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build", "--dry-run"])
+        code = main_func(["--build", "--build-dry-run"])
 
         # Verify exit code is 0
         assert code == 0
@@ -513,7 +513,7 @@ def test_cli_build_command_custom_config_path(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build", "--config", str(config_file)])
+        code = main_func(["--build", "--build-config", str(config_file)])
 
         # Verify exit code is 0
         assert code == 0
@@ -555,7 +555,7 @@ def test_cli_build_command_no_shebang_flag(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build", "--no-shebang"])
+        code = main_func(["--build", "--no-shebang"])
 
         # Verify exit code is 0
         assert code == 0
@@ -602,7 +602,7 @@ def test_cli_build_command_config_shebang_false(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0
@@ -651,7 +651,7 @@ def test_cli_build_command_compression_level(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build", "--compression-level", "9"])
+        code = main_func(["--build", "--compression-level", "9"])
 
         # Verify exit code is 0
         assert code == 0
@@ -700,7 +700,7 @@ def test_cli_build_command_compression_level_override_config(tmp_path: Path) -> 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
         # Override with CLI option
-        code = main_func(["build", "--compression-level", "9"])
+        code = main_func(["--build", "--compression-level", "9"])
 
         # Verify exit code is 0
         assert code == 0
@@ -744,7 +744,7 @@ def test_cli_build_command_python_config(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0

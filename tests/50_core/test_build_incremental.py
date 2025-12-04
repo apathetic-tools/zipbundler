@@ -224,7 +224,7 @@ def test_cli_build_command_incremental(tmp_path: Path) -> None:
 
         # First build
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0
@@ -238,7 +238,7 @@ def test_cli_build_command_incremental(tmp_path: Path) -> None:
         time.sleep(0.1)
 
         # Second build - should skip
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0
@@ -254,7 +254,7 @@ def test_cli_build_command_incremental(tmp_path: Path) -> None:
         module_file.write_text("def func():\n    pass\n# modified\n")
 
         # Third build - should rebuild
-        code = main_func(["build"])
+        code = main_func(["--build"])
 
         # Verify exit code is 0
         assert code == 0
@@ -267,7 +267,7 @@ def test_cli_build_command_incremental(tmp_path: Path) -> None:
         time.sleep(0.1)
 
         # Fourth build with --force - should rebuild
-        code = main_func(["build", "--force"])
+        code = main_func(["--build", "--build-force"])
 
         # Verify exit code is 0
         assert code == 0

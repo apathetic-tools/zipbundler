@@ -113,7 +113,7 @@ def test_cli_list_command_basic(
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["list", str(pkg_dir)])
+    code = main_func(["--list", str(pkg_dir)])
 
     # Verify exit code is 0
     assert code == 0
@@ -137,7 +137,7 @@ def test_cli_list_command_count(
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["list", str(pkg_dir), "--count"])
+    code = main_func(["--list", str(pkg_dir), "--list-count"])
 
     # Verify exit code is 0
     assert code == 0
@@ -164,7 +164,7 @@ def test_cli_list_command_tree(
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["list", str(pkg_dir), "--tree"])
+    code = main_func(["--list", str(pkg_dir), "--list-tree"])
 
     # Verify exit code is 0
     assert code == 0
@@ -192,7 +192,7 @@ def test_cli_list_command_multiple_packages(
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["list", str(pkg1_dir), str(pkg2_dir)])
+    code = main_func(["--list", str(pkg1_dir), str(pkg2_dir)])
 
     # Verify exit code is 0
     assert code == 0
@@ -210,7 +210,7 @@ def test_cli_list_command_no_source() -> None:
     main_func = mod_main if callable(mod_main) else mod_main.main
     # argparse raises SystemExit when required arguments are missing
     with pytest.raises(SystemExit) as exc_info:
-        main_func(["list"])
+        main_func(["--list"])
 
     # Should exit with error code 2 (argparse error)
     assert exc_info.value.code == ARGPARSE_ERROR_EXIT_CODE
@@ -330,7 +330,7 @@ def test_cli_list_command_archive(
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["list", str(archive)])
+    code = main_func(["--list", str(archive)])
 
     # Verify exit code is 0
     assert code == 0
@@ -363,7 +363,7 @@ def test_cli_list_command_archive_count(
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["list", str(archive), "--count"])
+    code = main_func(["--list", str(archive), "--list-count"])
 
     # Verify exit code is 0
     assert code == 0
@@ -399,7 +399,7 @@ def test_cli_list_command_archive_tree(
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["list", str(archive), "--tree"])
+    code = main_func(["--list", str(archive), "--list-tree"])
 
     # Verify exit code is 0
     assert code == 0
