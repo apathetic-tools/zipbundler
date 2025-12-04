@@ -68,7 +68,8 @@ Some of these we just want to consider, and may not want to implement.
   // Control code generation
   "options": {
     "shebang": true,           // Insert shebang line (default: true)
-    "compression": "deflate"   // zipfile compression method: "deflate", "stored", "bzip2", "lzma" (default: "stored")
+    "compression": "deflate",   // zipfile compression method: "deflate", "stored", "bzip2", "lzma" (default: "stored") ✅
+    "compression_level": 6     // Compression level 0-9 for deflate (default: 6) ✅
   },
   
   // Metadata

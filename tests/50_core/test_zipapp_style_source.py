@@ -183,6 +183,74 @@ def test_zipapp_style_from_archive_compress(tmp_path: Path) -> None:
             pytest.fail("No compressed files found in archive")
 
 
+def test_zipapp_style_from_archive_compression_level(tmp_path: Path) -> None:
+    """Test zipapp-style CLI building from archive with compression level."""
+    # Create initial archive
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    # Create a file with repetitive content that compresses well
+    content = "def func():\n    " + "x" * 1000 + "\n    pass\n"
+    (pkg_dir / "module.py").write_text(content)
+
+    initial_archive = tmp_path / "initial.pyz"
+    mod_build.build_zipapp(
+        output=initial_archive,
+        packages=[pkg_dir],
+        entry_point=None,
+        compression="stored",  # Initial archive not compressed
+    )
+
+    # Build new archive with compression and compression level
+    output = tmp_path / "new.pyz"
+
+    # Handle both module and function cases (runtime mode swap)
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func(
+        [str(initial_archive), "-o", str(output), "-c", "--compression-level", "9"]
+    )
+
+    # Verify exit code is 0
+    assert code == 0
+
+    # Verify output file was created
+    assert output.exists()
+
+    # Verify compression was applied with deflate
+    with zipfile.ZipFile(output, "r") as zf:
+        for info in zf.infolist():
+            assert info.compress_type == zipfile.ZIP_DEFLATED
+
+
+def test_zipapp_style_from_directory_compression_level(tmp_path: Path) -> None:
+    """Test zipapp-style CLI building from directory with compression level."""
+    # Create a test package with content that compresses well
+    pkg_dir = tmp_path / "mypackage"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("")
+    content = "def func():\n    " + "x" * 1000 + "\n    pass\n"
+    (pkg_dir / "module.py").write_text(content)
+
+    output = tmp_path / "app.pyz"
+
+    # Handle both module and function cases (runtime mode swap)
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func(
+        [str(pkg_dir), "-o", str(output), "-c", "--compression-level", "9"]
+    )
+
+    # Verify exit code is 0
+    assert code == 0
+
+    # Verify output file was created
+    assert output.exists()
+
+    # Verify compression was applied with deflate
+    with zipfile.ZipFile(output, "r") as zf:
+        for info in zf.infolist():
+            assert info.compress_type == zipfile.ZIP_DEFLATED
+
+
 def test_extract_archive_to_tempdir(tmp_path: Path) -> None:
     """Test extract_archive_to_tempdir function."""
     # Create a test archive

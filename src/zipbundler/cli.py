@@ -86,6 +86,12 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         action="store_true",
         help="Compress the zip file",
     )
+    parser.add_argument(
+        "--compression-level",
+        type=int,
+        dest="compression_level",
+        help="Compression level for deflate method (0-9, only used with --compress)",
+    )
 
     subparsers = parser.add_subparsers(
         dest="command", help="Command to run", required=False
@@ -492,6 +498,7 @@ def main(args: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
             parsed_args.shebang = None
             parsed_args.entry_point = None
             parsed_args.compress = False
+            parsed_args.compression_level = None
             # Parse known args without the first argument (treating it as source)
             parsed_args, remaining = parser.parse_known_args(args[1:])
             # Add first arg to remaining to be treated as source
