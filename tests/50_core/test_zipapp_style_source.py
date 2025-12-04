@@ -37,6 +37,10 @@ def test_zipapp_style_from_directory(tmp_path: Path) -> None:
         assert any("mypackage/__init__.py" in name for name in names)
         assert any("mypackage/module.py" in name for name in names)
 
+    # Verify no shebang by default (matches Python's zipapp behavior)
+    interpreter = mod_build.get_interpreter(output)
+    assert interpreter is None
+
 
 def test_zipapp_style_from_archive(tmp_path: Path) -> None:
     """Test zipapp-style CLI building from a .pyz archive."""
@@ -72,6 +76,11 @@ def test_zipapp_style_from_archive(tmp_path: Path) -> None:
         names = zf.namelist()
         assert any("mypackage/__init__.py" in name for name in names)
         assert any("mypackage/module.py" in name for name in names)
+
+    # Verify no shebang by default when -p is not specified
+    # (matches Python's zipapp behavior)
+    interpreter = mod_build.get_interpreter(output)
+    assert interpreter is None
 
 
 def test_zipapp_style_from_archive_with_options(tmp_path: Path) -> None:

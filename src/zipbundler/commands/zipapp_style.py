@@ -139,18 +139,19 @@ def handle_zipapp_style_command(args: argparse.Namespace) -> int:  # noqa: C901,
         entry_point_code = extract_entry_point_code(entry_point_str)
 
     # Extract shebang
+    # Match Python's zipapp behavior: no shebang by default, only when -p is specified
     shebang: str | None = None
     if hasattr(args, "shebang"):
         if args.shebang is False:
+            # --no-shebang explicitly disables shebang
             shebang = None
         elif args.shebang:
+            # -p/--python was specified, use it
             if args.shebang.startswith("#!"):
                 shebang = args.shebang
             else:
                 shebang = f"#!{args.shebang}"
-        else:
-            # Default shebang if not explicitly disabled
-            shebang = "#!/usr/bin/env python3"
+        # else: args.shebang is None (default), no shebang (matches zipapp behavior)
 
     # Extract compression
     compress = getattr(args, "compress", False)
