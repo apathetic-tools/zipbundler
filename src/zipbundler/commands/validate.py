@@ -268,6 +268,13 @@ def _validate_output_field(
         else:
             warnings.append(error_msg)
 
+    # Validate output.name field (optional)
+    if "name" in output:
+        output_name: Any = output["name"]  # pyright: ignore[reportUnknownVariableType]
+        if not isinstance(output_name, str):
+            msg = "Field 'output.name' must be a string"
+            warnings.append(msg)
+
 
 def _validate_options_field(
     config: dict[str, Any],

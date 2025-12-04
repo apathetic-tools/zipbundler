@@ -360,3 +360,93 @@ packages = ["toml_package/**/*.py"]
         assert code == 0
     finally:
         os.chdir(original_cwd)
+
+
+def test_cli_validate_command_valid_output_name(tmp_path: Path) -> None:
+    """Test validate command with valid output.name field."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create config file with valid output.name
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/my_package/**/*.py"],
+  "output": {
+    "path": "dist/my_package.zip",
+    "name": "my_package"
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (valid)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_invalid_output_name_type(tmp_path: Path) -> None:
+    """Test validate command with invalid output.name type (non-string)."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create config file with output.name as non-string
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/my_package/**/*.py"],
+  "output": {
+    "path": "dist/my_package.zip",
+    "name": 123
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (warning, not error)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_invalid_output_name_strict_mode(tmp_path: Path) -> None:
+    """Test validate command with invalid output.name in strict mode."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create config file with output.name as non-string
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/my_package/**/*.py"],
+  "output": {
+    "path": "dist/my_package.zip",
+    "name": 123
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate", "--strict"])
+
+        # Verify exit code is 1 (warning becomes error in strict mode)
+        assert code == 1
+    finally:
+        os.chdir(original_cwd)
