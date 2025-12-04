@@ -1,5 +1,6 @@
 import argparse
 import sys
+from difflib import get_close_matches
 
 from apathetic_logging import LEVEL_ORDER
 from apathetic_utils import detect_runtime_mode
@@ -15,7 +16,7 @@ from .commands import (
     handle_zipapp_style_command,
 )
 from .logs import getAppLogger
-from .meta import PROGRAM_DISPLAY, PROGRAM_PACKAGE
+from .meta import PROGRAM_DISPLAY, PROGRAM_PACKAGE, PROGRAM_SCRIPT
 
 
 def _handle_early_exits(args: argparse.Namespace) -> int | None:
@@ -39,10 +40,41 @@ def _handle_early_exits(args: argparse.Namespace) -> int | None:
     return None
 
 
+class HintingArgumentParser(argparse.ArgumentParser):
+    """Argument parser that provides helpful hints for mistyped arguments."""
+
+    def error(self, message: str) -> None:  # type: ignore[override]
+        """Override error to provide hints for unrecognized arguments."""
+        # Build known option strings: ["-v", "--verbose", "--log-level", ...]
+        known_opts: list[str] = []
+        for action in self._actions:
+            known_opts.extend([s for s in action.option_strings if s])
+
+        hint_lines: list[str] = []
+        # Argparse message for bad flags is typically
+        # "unrecognized arguments: --inclde ..."
+        if "unrecognized arguments:" in message:
+            bad = message.split("unrecognized arguments:", 1)[1].strip()
+            # Split conservatively on whitespace
+            bad_args = [tok for tok in bad.split() if tok.startswith("-")]
+            for arg in bad_args:
+                close = get_close_matches(arg, known_opts, n=1, cutoff=0.6)
+                if close:
+                    hint_lines.append(f"Hint: did you mean {close[0]}?")
+
+        # Print usage + the original error
+        self.print_usage(sys.stderr)
+        full = f"{self.prog}: error: {message}"
+        if hint_lines:
+            full += "\n" + "\n".join(hint_lines)
+        self.exit(2, full + "\n")
+
+
 def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     """Define and return the CLI argument parser."""
-    parser = argparse.ArgumentParser(
-        description="Bundle your packages into a runnable, importable zip"
+    parser = HintingArgumentParser(
+        prog=PROGRAM_SCRIPT,
+        description="Bundle your packages into a runnable, importable zip",
     )
 
     # --- Version and verbosity (before subparsers) ---
