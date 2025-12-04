@@ -450,3 +450,206 @@ def test_cli_validate_command_invalid_output_name_strict_mode(tmp_path: Path) ->
         assert code == 1
     finally:
         os.chdir(original_cwd)
+
+
+def test_cli_validate_command_valid_shebang_string(tmp_path: Path) -> None:
+    """Test validate command with valid shebang string."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create config file with valid shebang string
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/my_package/**/*.py"],
+  "options": {
+    "shebang": "/usr/bin/env python3"
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (valid)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_valid_shebang_with_hashbang(tmp_path: Path) -> None:
+    """Test validate command with valid shebang string including #!."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create config file with valid shebang string including #!
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/my_package/**/*.py"],
+  "options": {
+    "shebang": "#!/usr/bin/env python3"
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (valid)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_valid_shebang_boolean_true(tmp_path: Path) -> None:
+    """Test validate command with valid shebang boolean (true)."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create config file with shebang as boolean true
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/my_package/**/*.py"],
+  "options": {
+    "shebang": true
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (valid)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_valid_shebang_boolean_false(tmp_path: Path) -> None:
+    """Test validate command with valid shebang boolean (false)."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create config file with shebang as boolean false
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/my_package/**/*.py"],
+  "options": {
+    "shebang": false
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (valid)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_invalid_shebang_empty_string(tmp_path: Path) -> None:
+    """Test validate command with invalid shebang (empty string)."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create config file with empty shebang string
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/my_package/**/*.py"],
+  "options": {
+    "shebang": ""
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (warning, not error)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_invalid_shebang_type(tmp_path: Path) -> None:
+    """Test validate command with invalid shebang type (non-string, non-boolean)."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create config file with shebang as number
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/my_package/**/*.py"],
+  "options": {
+    "shebang": 123
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate"])
+
+        # Verify exit code is 0 (warning, not error)
+        assert code == 0
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_cli_validate_command_invalid_shebang_strict_mode(tmp_path: Path) -> None:
+    """Test validate command with invalid shebang in strict mode."""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_path)
+
+        # Create config file with invalid shebang type
+        config_file = tmp_path / ".zipbundler.jsonc"
+        config_file.write_text(
+            """{
+  "packages": ["src/my_package/**/*.py"],
+  "options": {
+    "shebang": 123
+  }
+}
+""",
+            encoding="utf-8",
+        )
+
+        # Handle both module and function cases (runtime mode swap)
+        main_func = mod_main if callable(mod_main) else mod_main.main
+        code = main_func(["validate", "--strict"])
+
+        # Verify exit code is 1 (warning becomes error in strict mode)
+        assert code == 1
+    finally:
+        os.chdir(original_cwd)

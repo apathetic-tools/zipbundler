@@ -276,6 +276,33 @@ def _validate_output_field(
             warnings.append(msg)
 
 
+def _validate_shebang_option(
+    options: dict[str, Any],
+    warnings: list[str],
+) -> None:
+    """Validate shebang option."""
+    if "shebang" not in options:
+        return
+
+    shebang_val: Any = options["shebang"]  # pyright: ignore[reportUnknownVariableType]
+    if isinstance(shebang_val, bool):
+        # Boolean values are valid (True = use default, False = disable)
+        return
+    if isinstance(shebang_val, str):
+        # String values should be non-empty
+        if not shebang_val.strip():
+            msg = (
+                "Field 'options.shebang' must be a non-empty string, boolean, or false"
+            )
+            warnings.append(msg)
+        return
+
+    # Invalid type
+    type_name = type(shebang_val).__name__  # pyright: ignore[reportUnknownArgumentType]
+    msg = f"Field 'options.shebang' must be a string or boolean, got {type_name}"
+    warnings.append(msg)
+
+
 def _validate_options_field(
     config: dict[str, Any],
     warnings: list[str],
@@ -320,6 +347,12 @@ def _validate_options_field(
                 f"'options.compression' is 'deflate' (got '{compression}')"
             )
             warnings.append(msg)
+
+    # Validate shebang
+    _validate_shebang_option(
+        options,  # pyright: ignore[reportUnknownArgumentType]
+        warnings,
+    )
 
 
 def _validate_metadata_field(
