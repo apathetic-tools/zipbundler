@@ -89,11 +89,6 @@ Some of these we just want to consider, and may not want to implement.
 - **Entry Point Handler**: Handle entry point generation
 - **Code Generator**: Generate shebang and entry point code
 
-## 📦 Preset Library
-
-- **Common Patterns**: Preset configs for common project structures
-- **Template Configs**: Starter configs for different use cases
-
 ## 🧪 Testing
 
 - **Unit Tests**: Test core bundling functionality

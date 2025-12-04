@@ -107,6 +107,17 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         action="store_true",
         help="Overwrite existing config file",
     )
+    init_parser.add_argument(
+        "--preset",
+        default="basic",
+        help="Use a preset template: basic, cli, library, or minimal (default: basic)",
+    )
+    init_parser.add_argument(
+        "--list-presets",
+        action="store_true",
+        dest="list_presets",
+        help="List available preset templates",
+    )
 
     # Add log level options to init parser
     log_level_init = init_parser.add_mutually_exclusive_group()
