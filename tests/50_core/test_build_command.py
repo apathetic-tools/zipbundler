@@ -475,7 +475,7 @@ def test_cli_build_command_dry_run(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--build", "--build-dry-run"])
+        code = main_func(["--build", "--dry-run"])
 
         # Verify exit code is 0
         assert code == 0
@@ -513,7 +513,7 @@ def test_cli_build_command_custom_config_path(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--build", "--build-config", str(config_file)])
+        code = main_func(["--build", "--config", str(config_file)])
 
         # Verify exit code is 0
         assert code == 0

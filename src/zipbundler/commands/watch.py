@@ -15,7 +15,7 @@ def handle_watch_command(args: argparse.Namespace) -> int:
     """Handle the watch subcommand."""
     logger = getAppLogger()
 
-    if not args.source:
+    if not args.include:
         logger.error("source is required for watch command")
         return 1
 
@@ -24,13 +24,11 @@ def handle_watch_command(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        packages = [Path(p) for p in args.source]
+        packages = [Path(p) for p in args.include]
         output = Path(args.output)
 
         # Determine watch interval
-        interval = (
-            args.interval if args.interval is not None else DEFAULT_WATCH_INTERVAL
-        )
+        interval = args.watch if args.watch is not None else DEFAULT_WATCH_INTERVAL
 
         # Build rebuild function
         def rebuild() -> None:

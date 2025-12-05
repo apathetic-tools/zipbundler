@@ -39,7 +39,8 @@ Changelog = "https://github.com/apathetic-tools/zipbundler/releases"
 # --- Development tasks ---
 [tool.poe.tasks]
 # 🧩 All-in-one
-"check:fix" = ["pre-commit:install", "fix", "typecheck", "test:parallel"]
+"check:fix" = ["check:fix:notests", "test:parallel"]
+"check:fix:notests" = ["pre-commit:install", "fix", "typecheck"]
 
 # 🔍 Linting and static checks
 check = ["lint", "typecheck",  "test:parallel"]
@@ -53,7 +54,11 @@ typecheck = ["typecheck:mypy", "typecheck:pyright"]
 "typecheck:pyright" = "bash dev/pyright-quiet.sh src tests"
 
 # 🧪 Tests (runs all three: installed + singlefile + zipapp)
-test = ["test:pytest:installed", "test:pytest:script"]
+test = [
+  "test:pytest:installed", 
+  "test:pytest:script", 
+  "test:pytest:zipapp"
+]
 "test:pytest:installed" = "pytest"
 "test:pytest:installed:parallel" = "pytest -n auto"
 "test:pytest:script" = [
@@ -95,7 +100,7 @@ test = ["test:pytest:installed", "test:pytest:script"]
 "test:parallel" = [
   "test:pytest:installed:parallel",
   "test:pytest:script:parallel",
-#  "test:pytest:zipapp:parallel"
+  "test:pytest:zipapp:parallel"
 ]
 
 # 📊 Coverage reporting

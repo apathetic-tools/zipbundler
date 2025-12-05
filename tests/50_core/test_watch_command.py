@@ -146,7 +146,9 @@ def test_cli_watch_command_basic(tmp_path: Path) -> None:
     with patch("zipbundler.actions.time.sleep", side_effect=KeyboardInterrupt()):
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--watch", str(pkg_dir), "-o", str(output)])
+        # Source should be positional argument, put it first to avoid --watch
+        # parsing it as float
+        code = main_func([str(pkg_dir), "--watch", "-o", str(output)])
 
     # Should return 0 (KeyboardInterrupt is handled gracefully)
     assert code == 0
@@ -194,16 +196,17 @@ def test_cli_watch_command_with_options(tmp_path: Path) -> None:
     with patch("zipbundler.actions.time.sleep", side_effect=KeyboardInterrupt()):
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
+        # --watch can take an optional interval value: --watch 5.0
+        # Source should be positional argument, put it at the end
         code = main_func(
             [
-                "--watch",
                 str(pkg_dir),
+                "--watch",
+                str(WATCH_INTERVAL_TEST),
                 "-o",
                 str(output),
                 "--compress",
-                "--watch-interval",
-                str(WATCH_INTERVAL_TEST),
-                "--watch-exclude",
+                "--exclude",
                 "**/tests/**",
             ]
         )

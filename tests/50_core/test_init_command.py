@@ -36,12 +36,12 @@ def test_cli_init_command_creates_file(tmp_path: Path) -> None:
 
 
 def test_cli_init_command_custom_output(tmp_path: Path) -> None:
-    """Test init command with custom output path."""
+    """Test init command with custom config file path."""
     custom_path = tmp_path / "custom.jsonc"
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["--init", "--init-output", str(custom_path)])
+    code = main_func(["--init", "--config", str(custom_path)])
 
     # Verify exit code is 0
     assert code == 0
@@ -89,7 +89,7 @@ def test_cli_init_command_force_overwrite(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--init", "--init-force"])
+        code = main_func(["--init", "--force"])
 
         # Verify exit code is 0
         assert code == 0
@@ -98,117 +98,6 @@ def test_cli_init_command_force_overwrite(tmp_path: Path) -> None:
         content = config_file.read_text(encoding="utf-8")
         assert content != "existing content"
         assert '"packages"' in content
-    finally:
-        os.chdir(original_cwd)
-
-
-def test_cli_init_command_with_cli_preset(tmp_path: Path) -> None:
-    """Test init command with CLI preset."""
-    original_cwd = Path.cwd()
-    try:
-        os.chdir(tmp_path)
-
-        # Handle both module and function cases (runtime mode swap)
-        main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--init", "--init-preset", "cli"])
-
-        # Verify exit code is 0
-        assert code == 0
-
-        # Verify config file was created
-        config_file = tmp_path / ".zipbundler.jsonc"
-        assert config_file.exists()
-
-        # Verify CLI preset content
-        content = config_file.read_text(encoding="utf-8")
-        assert '"entry_point"' in content
-        assert '"metadata"' in content
-        assert "my_package.__main__:main" in content
-    finally:
-        os.chdir(original_cwd)
-
-
-def test_cli_init_command_with_library_preset(tmp_path: Path) -> None:
-    """Test init command with library preset."""
-    original_cwd = Path.cwd()
-    try:
-        os.chdir(tmp_path)
-
-        # Handle both module and function cases (runtime mode swap)
-        main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--init", "--init-preset", "library"])
-
-        # Verify exit code is 0
-        assert code == 0
-
-        # Verify config file was created
-        config_file = tmp_path / ".zipbundler.jsonc"
-        assert config_file.exists()
-
-        # Verify library preset content (no entry point, shebang false)
-        content = config_file.read_text(encoding="utf-8")
-        assert '"metadata"' in content
-        assert '"shebang": false' in content
-        assert '"main_guard": false' in content
-    finally:
-        os.chdir(original_cwd)
-
-
-def test_cli_init_command_with_minimal_preset(tmp_path: Path) -> None:
-    """Test init command with minimal preset."""
-    original_cwd = Path.cwd()
-    try:
-        os.chdir(tmp_path)
-
-        # Handle both module and function cases (runtime mode swap)
-        main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--init", "--init-preset", "minimal"])
-
-        # Verify exit code is 0
-        assert code == 0
-
-        # Verify config file was created
-        config_file = tmp_path / ".zipbundler.jsonc"
-        assert config_file.exists()
-
-        # Verify minimal preset content (just packages and output)
-        content = config_file.read_text(encoding="utf-8")
-        assert '"packages"' in content
-        assert '"output"' in content
-        # Should not have exclude, options, or metadata
-        assert '"exclude"' not in content
-        assert '"options"' not in content
-        assert '"metadata"' not in content
-    finally:
-        os.chdir(original_cwd)
-
-
-def test_cli_init_command_list_presets() -> None:
-    """Test init command --list-presets flag."""
-    # Handle both module and function cases (runtime mode swap)
-    main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["--init", "--init-list-presets"])
-
-    # Verify exit code is 0
-    assert code == 0
-
-
-def test_cli_init_command_invalid_preset(tmp_path: Path) -> None:
-    """Test init command with invalid preset name."""
-    original_cwd = Path.cwd()
-    try:
-        os.chdir(tmp_path)
-
-        # Handle both module and function cases (runtime mode swap)
-        main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--init", "--init-preset", "invalid"])
-
-        # Verify exit code is 1 (error)
-        assert code == 1
-
-        # Verify config file was not created
-        config_file = tmp_path / ".zipbundler.jsonc"
-        assert not config_file.exists()
     finally:
         os.chdir(original_cwd)
 
@@ -301,7 +190,7 @@ def test_cli_init_command_no_metadata_when_no_pyproject(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--init", "--init-preset", "basic"])
+        code = main_func(["--init"])
 
         # Verify exit code is 0
         assert code == 0
@@ -312,7 +201,7 @@ def test_cli_init_command_no_metadata_when_no_pyproject(tmp_path: Path) -> None:
 
         # Verify metadata section is still commented (not auto-detected)
         content = config_file.read_text(encoding="utf-8")
-        # For basic preset, metadata should be commented out
+        # Metadata should be commented out when no pyproject.toml exists
         assert '// "metadata":' in content or '"metadata":' not in content
     finally:
         os.chdir(original_cwd)
@@ -408,7 +297,7 @@ version = "1.0.0"
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--init", "--init-preset", "basic"])
+        code = main_func(["--init"])
 
         # Verify exit code is 0
         assert code == 0
@@ -419,7 +308,7 @@ version = "1.0.0"
 
         # Verify entry_point section is still commented (not auto-detected)
         content = config_file.read_text(encoding="utf-8")
-        # For basic preset, entry_point should be commented out
+        # Entry point should be commented out when no scripts section exists
         assert '// "entry_point":' in content or '"entry_point"' not in content
     finally:
         os.chdir(original_cwd)

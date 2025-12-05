@@ -1,6 +1,6 @@
 # src/zipbundler/meta.py
 
-"""Centralized program identity constants for Zipbundler."""
+"""Centralized program identity constants for the Project."""
 
 from dataclasses import dataclass
 

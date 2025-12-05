@@ -161,7 +161,7 @@ def test_cli_validate_command_strict_mode(tmp_path: Path) -> None:
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--validate", "--validate-strict"])
+        code = main_func(["--validate", "--strict"])
 
         # Verify exit code is 1 (warning becomes error in strict mode)
         assert code == 1
@@ -183,7 +183,7 @@ def test_cli_validate_command_custom_config_path(tmp_path: Path) -> None:
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["--validate", "--validate-config", str(config_file)])
+    code = main_func(["--validate", "--config", str(config_file)])
 
     # Verify exit code is 0
     assert code == 0
@@ -444,7 +444,7 @@ def test_cli_validate_command_invalid_output_name_strict_mode(tmp_path: Path) ->
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--validate", "--validate-strict"])
+        code = main_func(["--validate", "--strict"])
 
         # Verify exit code is 1 (warning becomes error in strict mode)
         assert code == 1
@@ -647,7 +647,7 @@ def test_cli_validate_command_invalid_shebang_strict_mode(tmp_path: Path) -> Non
 
         # Handle both module and function cases (runtime mode swap)
         main_func = mod_main if callable(mod_main) else mod_main.main
-        code = main_func(["--validate", "--validate-strict"])
+        code = main_func(["--validate", "--strict"])
 
         # Verify exit code is 1 (warning becomes error in strict mode)
         assert code == 1

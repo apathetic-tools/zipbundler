@@ -61,7 +61,9 @@ def handle_zipapp_style_command(args: argparse.Namespace) -> int:  # noqa: C901,
     """
     logger = getAppLogger()
 
-    source_str = getattr(args, "source", None)
+    # Handle include - for zipapp-style, it's already a single string
+    # (first element from main())
+    source_str = getattr(args, "include", None)
     if not source_str:
         logger.error("SOURCE is required")
         return 1

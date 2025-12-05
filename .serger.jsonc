@@ -20,7 +20,8 @@
   "include": [
     "src/zipbundler/**/*.py",
     "apathetic_logging/**/*.py",  // Include installed apathetic-logging package
-    "apathetic_utils/**/*.py"  // Include installed apathetic-utils package
+    "apathetic_utils/**/*.py",  // Include installed apathetic-utils package
+    "apathetic_schema/**/*.py"  // Include installed apathetic-schema package
   ],
 
   // Global configuration defaults

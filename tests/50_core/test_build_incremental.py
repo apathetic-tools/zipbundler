@@ -267,7 +267,7 @@ def test_cli_build_command_incremental(tmp_path: Path) -> None:
         time.sleep(0.1)
 
         # Fourth build with --force - should rebuild
-        code = main_func(["--build", "--build-force"])
+        code = main_func(["--build", "--force"])
 
         # Verify exit code is 0
         assert code == 0

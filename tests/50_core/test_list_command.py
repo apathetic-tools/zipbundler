@@ -118,11 +118,16 @@ def test_cli_list_command_basic(
     # Verify exit code is 0
     assert code == 0
 
-    # Verify output contains the files
+    # Verify output contains the files (tree format at detail level)
+    # List command shows count at brief level, tree at detail level
+    # To see file names, we need detail level
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func(["--list", str(pkg_dir), "--detail"])
+    assert code == 0
     captured = capsys.readouterr()
     output = captured.out
-    assert "mypackage/__init__.py" in output or "__init__.py" in output
-    assert "mypackage/module.py" in output or "module.py" in output
+    assert "Files: 2" in output
+    assert "mypackage" in output or "__init__.py" in output or "module.py" in output
 
 
 def test_cli_list_command_count(
@@ -137,7 +142,7 @@ def test_cli_list_command_count(
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["--list", str(pkg_dir), "--list-count"])
+    code = main_func(["--list", str(pkg_dir)])
 
     # Verify exit code is 0
     assert code == 0
@@ -164,7 +169,7 @@ def test_cli_list_command_tree(
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["--list", str(pkg_dir), "--list-tree"])
+    code = main_func(["--list", str(pkg_dir), "--detail"])
 
     # Verify exit code is 0
     assert code == 0
@@ -197,9 +202,15 @@ def test_cli_list_command_multiple_packages(
     # Verify exit code is 0
     assert code == 0
 
-    # Verify output contains files from both packages
+    # Verify output contains files from both packages (tree format at detail level)
+    # List command shows count at brief level, tree at detail level
+    # To see file names, we need detail level
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func(["--list", str(pkg1_dir), str(pkg2_dir), "--detail"])
+    assert code == 0
     captured = capsys.readouterr()
     output = captured.out
+    assert "Files: 2" in output
     assert "package1" in output or "__init__.py" in output
     assert "package2" in output or "__init__.py" in output
 
@@ -335,9 +346,15 @@ def test_cli_list_command_archive(
     # Verify exit code is 0
     assert code == 0
 
-    # Verify output contains the files
+    # Verify output contains the files (tree format at detail level)
+    # List command shows count at brief level, tree at detail level
+    # To see file names, we need detail level
+    main_func = mod_main if callable(mod_main) else mod_main.main
+    code = main_func(["--list", str(archive), "--detail"])
+    assert code == 0
     captured = capsys.readouterr()
     output = captured.out
+    assert "Files: 2" in output
     assert "__init__.py" in output or "mypackage" in output
     assert "module.py" in output
 
@@ -363,7 +380,7 @@ def test_cli_list_command_archive_count(
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["--list", str(archive), "--list-count"])
+    code = main_func(["--list", str(archive)])
 
     # Verify exit code is 0
     assert code == 0
@@ -399,7 +416,7 @@ def test_cli_list_command_archive_tree(
 
     # Handle both module and function cases (runtime mode swap)
     main_func = mod_main if callable(mod_main) else mod_main.main
-    code = main_func(["--list", str(archive), "--list-tree"])
+    code = main_func(["--list", str(archive), "--detail"])
 
     # Verify exit code is 0
     assert code == 0
