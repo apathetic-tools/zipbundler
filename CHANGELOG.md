@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+## v0.3.0 (2025-12-14)
+
+### Documentation
+
+- Add --add-include documentation and examples
+  ([`56b86e8`](https://github.com/apathetic-tools/zipbundler/commit/56b86e87bcbebeeee907e10a66da1debd0d83f0e))
+
+### Features
+
+- **add-include**: Implement --add-include CLI flag for appending includes
+  ([`1309ab4`](https://github.com/apathetic-tools/zipbundler/commit/1309ab4da9029b1d4372e38dcddcbea939e8a82f))
+
+- **include**: Align --include and config includes with serger's path semantics
+  ([`3138bb2`](https://github.com/apathetic-tools/zipbundler/commit/3138bb2f85a53ed5527cee1deb97986f4fc18ba0))
+
+
 ## v0.2.1 (2025-12-14)
 
 ### Bug Fixes
