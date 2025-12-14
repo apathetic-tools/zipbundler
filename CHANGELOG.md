@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.4.0 (2025-12-14)
+
+### Features
+
+- **exclude**: Align exclude handling with serger's path semantics
+  ([`1415d51`](https://github.com/apathetic-tools/zipbundler/commit/1415d51deb8aacd92f430ea9dc6c5a40f28d375a))
+
+
 ## v0.3.0 (2025-12-14)
 
 ### Documentation
