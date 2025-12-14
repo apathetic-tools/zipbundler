@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.2.1 (2025-12-14)
+
+### Bug Fixes
+
+- **config**: Fix pyproject.toml discovery to skip invalid files
+  ([`83bb3a6`](https://github.com/apathetic-tools/zipbundler/commit/83bb3a6ff96c4b318b46bb37c55945a1098fd5cd))
+
+
 ## v0.2.0 (2025-12-14)
 
 ### Bug Fixes
