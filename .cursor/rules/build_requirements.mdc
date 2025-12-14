@@ -1,0 +1,116 @@
+---
+description: Build reproducibility and determinism requirements
+globs:
+  - "**/*.py"
+alwaysApply: true
+---
+
+## Build Reproducibility and Determinism
+
+Serger builds must be **reproducible, deterministic, and idempotent**. This means:
+
+- **Reproducible**: Running the same build configuration multiple times produces identical output
+- **Deterministic**: Build output does not depend on iteration order of unordered collections (sets, dicts without explicit ordering)
+- **Idempotent**: Running a build multiple times with the same inputs produces the same result
+
+### Requirements
+
+1. **Collection Iteration Order**
+   - **Always sort** before iterating over collections that affect output:
+     - Sets: `for item in sorted(my_set):`
+     - Dict keys/values/items: `for key, value in sorted(my_dict.items()):`
+     - Any collection where iteration order affects the final build output
+   - **When sorting is redundant**: If a list is already sorted and you only perform operations that preserve sorted order (e.g., deleting items, filtering), you don't need to sort again before iterating
+   - This applies to:
+     - Module ordering
+     - Import collection and ordering
+     - Dependency resolution
+     - Symbol extraction and collision detection
+     - Package detection
+     - Any other collection that ends up in the final output
+
+2. **File System Ordering**
+   - File collections from glob patterns or directory walks must be sorted
+   - Example: `collect_included_files()` already returns `sorted(filtered)` to ensure deterministic file ordering
+
+3. **Dependency Graph Ordering**
+   - Dependency graphs (e.g., for module ordering via topological sort) provide a **partial order**
+   - The graph determines which modules must come before others (dependency constraints)
+   - When multiple valid orderings exist (modules with no dependencies between them), sorting is used to break ties and ensure determinism
+   - The dependency graph (`deps`) must be built with sorted file paths to ensure consistent dict insertion order
+   - This ensures `graphlib.TopologicalSorter.static_order()` produces deterministic results even when there are multiple valid topological orderings
+
+4. **No Time-Dependent Output**
+   - Build timestamps in metadata are acceptable (they're explicitly time-dependent)
+   - But the structure and content of the stitched code must not depend on build time or execution order
+
+### Implementation Guidelines
+
+When working with collections that affect build output:
+
+```python
+# ❌ BAD: Non-deterministic iteration
+for pkg in detected_packages:  # set iteration order is undefined
+    # process package
+
+# ✅ GOOD: Deterministic iteration
+for pkg in sorted(detected_packages):
+    # process package
+```
+
+```python
+# ❌ BAD: Dict iteration without sorting
+for mod_name, source in module_sources.items():
+    # process module
+
+# ✅ GOOD: Deterministic iteration
+for mod_name, source in sorted(module_sources.items()):
+    # process module
+```
+
+**When sorting is redundant:**
+```python
+# ✅ GOOD: List already sorted, only deleting items preserves order
+sorted_list = sorted(original_collection)
+for item in sorted_list:
+    if should_keep(item):
+        process(item)
+# Later iteration - still sorted, no need to sort again
+for item in sorted_list:  # ✅ OK: still sorted after deletions
+    process_remaining(item)
+
+# ❌ BAD: Adding items without maintaining sort order
+sorted_list = sorted(original_collection)
+sorted_list.append(new_item)  # Breaks sorted order
+for item in sorted_list:  # ❌ Need to sort again
+    process(item)
+
+# ✅ GOOD: If you can guarantee the list is still sorted
+sorted_list = sorted(original_collection)
+# Only operations that preserve order (delete, filter, slice)
+filtered = [x for x in sorted_list if condition(x)]  # Still sorted
+for item in filtered:  # ✅ OK: filtered list maintains sort order
+    process(item)
+```
+
+**Dependency Graph Ordering:**
+```python
+# Dependency graphs provide partial ordering (A must come before B)
+# But when multiple valid orderings exist, sorting ensures determinism
+
+# ✅ GOOD: Build graph with sorted inputs for deterministic tie-breaking
+# Note: file_paths is already sorted from collect_included_files()
+# This ensures dict insertion order is deterministic, which makes
+# topological sort deterministic even when multiple valid orderings exist
+deps: dict[str, set[str]] = {
+    file_to_module[fp]: set() for fp in file_paths  # already sorted
+}
+# Topological sort respects dependencies AND uses dict insertion order for ties
+topo_modules = list(graphlib.TopologicalSorter(deps).static_order())
+```
+
+### Verification
+
+- All tests must pass to verify correctness
+- Builds should produce identical output when run multiple times with the same configuration
+- When making changes that affect iteration order, verify that the output remains deterministic

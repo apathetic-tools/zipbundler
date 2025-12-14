@@ -237,7 +237,7 @@ sandbox.config.json
 !.vscode/launch.json
 !.vscode/tasks.json
 !.vscode/settings.json
-!serger.code-workspace
+!zipbundler.code-workspace
 
 # System Files
 .DS_Store
@@ -260,6 +260,10 @@ Desktop.ini
 .plan/
 .plans/
 .claude/settings.local.json
+
+
+# Jenkyl documentation
+docs/_site/
 
 # Backups
 *.bak

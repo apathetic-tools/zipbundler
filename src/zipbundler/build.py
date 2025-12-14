@@ -9,6 +9,7 @@ from pathlib import Path
 
 from apathetic_utils import is_excluded_raw
 
+from .constants import DEFAULT_SOURCE_BASES
 from .logs import getAppLogger
 
 
@@ -232,11 +233,22 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
             logger.warning("Package path does not exist: %s", pkg_path)
             continue
 
-        # Use package parent as root for exclude pattern matching
+        # Determine the exclude root:
+        # If the package is a common source directory (src, lib, packages),
+        # use it as the exclude root so packages end up at the root of the zip.
+        # Otherwise, use the package parent.
+        # This ensures src/zipbundler ends up as zipbundler/ not src/zipbundler/
         exclude_root = pkg_path.parent
+        if pkg_path.name in DEFAULT_SOURCE_BASES:
+            # This is a source directory - use it as root so packages extract to root
+            exclude_root = pkg_path
+            logger.trace(
+                "Detected source directory '%s', using it as exclude root",
+                pkg_path.name,
+            )
 
         for f in pkg_path.rglob("*.py"):
-            # Calculate relative path from package parent
+            # Calculate relative path from exclude root
             arcname = f.relative_to(exclude_root)
             # Check if file matches exclude patterns
             if _matches_exclude_pattern(f, arcname, exclude_patterns, exclude_root):

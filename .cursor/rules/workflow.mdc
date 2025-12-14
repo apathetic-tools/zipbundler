@@ -1,0 +1,27 @@
+---
+description: Execution and workflow conventions
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+### Execution and Workflow
+- **VENV:** Use the poetry venv for execution, e.g. `poetry run python3` (not bare `python3`)
+- **Poe tasks**: `check`, `fix`, `test`, `coverage`, `check:fix` (before commit), `build:script`
+- **NEVER edit `.cursor/` or `.claude/` directly**: Generated from `.ai/`. Edit `.ai/rules/` or `.ai/commands/`, then run `poetry run poe sync:ai:guidance` and include generated files in commit.
+- **Before committing**: Run `poetry run poe check:fix`
+- **Debugging tests**: 
+  1. First try `LOG_LEVEL=test poetry run poe test:pytest:installed tests/path/to/test.py::test_name -xvs`. 
+  2. If stuck, see `.ai/workflows/debug_tests.md`
+
+### Plan File Management
+
+When creating a **new** plan document:
+- Check `.plan/` for plan files older than 24 hours
+- If found, ask developer if they should be deleted
+- Note any plans that are not marked as all phases completed
+- Keep implemented/completed plans; only ask about stale incomplete plans
+
+### When to Read Workflow/Template Files
+
+Only read `.ai/workflows/` or `.ai/templates/` when: condition is met (e.g., stuck debugging ? read `debug_tests.md`), or directly asked to work on them. Mentions in rules are references, not immediate read instructions.

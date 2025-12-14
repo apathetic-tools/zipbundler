@@ -1,16 +1,17 @@
-# tests/0_independant/test_no_from_app_imports.py
+# tests/10_lint/test_lint__no_from_app_imports.py
 """Custom lint rule: Enforce `import <mod> as mod_<mod>` pattern in tests.
 
 This test acts as a "poor person's linter" since we can't create custom ruff rules yet.
-It enforces that ALL test files use `import zipbundler.module as mod_module` format
-instead of `from zipbundler.module import ...` when importing from our project.
+It enforces that ALL test files use
+`import <package>.<module> as mod_<module>` format
+instead of `from <package>.<module> import ...` when importing from our project.
 
 CRITICAL: This rule applies to ALL imports from our project, including private
-functions (those starting with _). There are NO exceptions.
+functions (those starting with _). There are NO exceptions (except TYPE_CHECKING).
 
 Why this matters:
-- runtime_swap: Tests can run against either installed package or standalone
-  single-file script. The `import ... as mod_*` pattern ensures the module object
+- runtime_swap: Tests can run against either installed package or stitched
+  script. The `import ... as mod_*` pattern ensures the module object
   is available for runtime swapping.
 - patch_everywhere: Predictive patching requires module objects to be available
   at the module level. Using `from ... import` breaks this because the imported
@@ -24,43 +25,60 @@ the function directly.
 import ast
 from pathlib import Path
 
-import zipbundler.meta as mod_meta
+from tests.utils import DISALLOWED_PACKAGES
 
 
-# Package names that are disallowed from `from ... import` statements in tests
-# All imports from these packages must use
-# `import <package>.<module> as mod_<module>` format
-DISALLOWED_PACKAGES = [
-    mod_meta.PROGRAM_PACKAGE,
-    "apathetic_utils",
-    "apathetic_schema",
-    "apathetic_logs",
-]
+class ImportChecker(ast.NodeVisitor):
+    """Visitor to check for disallowed imports and track TYPE_CHECKING context."""
+
+    def __init__(self) -> None:
+        self.bad_imports: list[ast.ImportFrom] = []
+        self.in_type_checking = False
+
+    def visit_If(self, node: ast.If) -> None:
+        # Check if this is an if TYPE_CHECKING block
+        if isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING":
+            old_state = self.in_type_checking
+            self.in_type_checking = True
+            for stmt in node.body:
+                self.visit(stmt)
+            self.in_type_checking = old_state
+        else:
+            self.generic_visit(node)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        if (
+            node.module
+            and any(node.module.startswith(pkg) for pkg in DISALLOWED_PACKAGES)
+            and not self.in_type_checking
+        ):
+            self.bad_imports.append(node)
+        self.generic_visit(node)
 
 
 def test_no_app_from_imports() -> None:
-    """Enforce `import <mod> as mod_<mod>` pattern for all project imports in tests.
+    """Enforce `import <mod> as mod_<mod>` pattern for all project imports in tests/.
 
     This is a custom lint rule implemented as a pytest test because we can't
-    create custom ruff rules yet. It ensures all test files use the module-level
-    import pattern required for runtime_swap and patch_everywhere to work correctly.
+    create custom ruff rules yet. It ensures all files in tests/ (including
+    conftest.py, tests/utils/, etc.) use the module-level import pattern required
+    for runtime_swap and patch_everywhere to work correctly.
+
+    Exception: Imports inside `if TYPE_CHECKING:` blocks are allowed for type
+    annotations only.
     """
     tests_dir = Path(__file__).parents[1]  # tests/ directory (not project root)
     bad_files: list[Path] = []
 
     for path in tests_dir.rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
-            if (
-                isinstance(node, ast.ImportFrom)
-                and node.module
-                and any(node.module.startswith(pkg) for pkg in DISALLOWED_PACKAGES)
-            ):
-                # NO EXCEPTIONS: All imports from our project must use
-                # module-level imports. This includes private functions -
-                # use mod_module._private_function() instead
-                bad_files.append(path)
-                break  # only need one hit per file
+        checker = ImportChecker()
+        checker.visit(tree)
+        if checker.bad_imports:
+            # NO EXCEPTIONS (except TYPE_CHECKING): All imports from our
+            # project must use module-level imports. This includes private
+            # functions - use mod_module._private_function() instead
+            bad_files.append(path)
 
     if bad_files:
         packages_str = ", ".join(DISALLOWED_PACKAGES)

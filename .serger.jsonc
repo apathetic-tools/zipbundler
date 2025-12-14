@@ -1,4 +1,4 @@
-// Zipbundler's self-hosting configuration
+// Serger's configuration
 // This file defines how to stitch zipbundler itself into a single-file python script
 
 {
@@ -24,7 +24,14 @@
     "apathetic_schema/**/*.py"  // Include installed apathetic-schema package
   ],
 
-  // Global configuration defaults
-  "log_level": "warning"
+    // Files to exclude from stitching
+  // These are often development-only or auto-generated utilities
+  "exclude": [
+    "__pycache__/**",
+    "*.pyc",
+    "**/__main__.py"     // Entry point, not stitched
+//        "apathetic_*/__init__.py"  // Exclude __init__.py for apathetic_schema
+                                     // (types are available via class mixin)
+  ],
 }
 

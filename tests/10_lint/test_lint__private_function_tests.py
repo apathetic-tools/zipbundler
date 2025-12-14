@@ -1,4 +1,4 @@
-# tests/0_tooling/test_lint__private_function_naming.py
+# tests/10_lint/test_lint__private_function_tests.py
 """Custom lint rules: Enforce naming and documentation for private function tests.
 
 This test file acts as a "poor person's linter" since we can't create custom ruff
