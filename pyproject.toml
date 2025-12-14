@@ -210,6 +210,7 @@ dev = [
     "python-semantic-release (>=10.0.0,<11.0.0)",
     "serger (>=0.1.0,<2.0.0)",
     "sheave (>=0.1.0,<2.0.0)",
+    "trove-classifiers (>=2025.0.0,<2026.0.0)",
 ]
 
 # --- Ruff: formatter and linter ---
