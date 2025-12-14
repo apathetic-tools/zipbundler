@@ -107,6 +107,21 @@ class MetadataConfig(TypedDict, total=False):
     license: str
 
 
+# --- Include configuration types ---
+
+
+class IncludeConfig(TypedDict):
+    """Include configuration with optional destination.
+
+    Fields:
+        path: Path, glob pattern, or file name to include
+        dest: Optional destination in the output zip
+    """
+
+    path: str
+    dest: NotRequired[str]
+
+
 # --- Root configuration type ---
 
 
@@ -116,6 +131,7 @@ class RootConfig(TypedDict, total=False):
     Fields:
         packages: Required list of package paths or glob patterns to include
         exclude: Optional list of glob patterns for files/directories to exclude
+        include: Optional list of additional files/directories to include
         entry_point: Optional entry point in format "module.path:function" or
             "module.path"
         output: Optional output configuration
@@ -125,6 +141,7 @@ class RootConfig(TypedDict, total=False):
 
     packages: list[str]  # Required
     exclude: list[str]
+    include: list[str | IncludeConfig]
     entry_point: str
     output: OutputConfig
     options: OptionsConfig

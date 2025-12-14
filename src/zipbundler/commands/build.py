@@ -7,7 +7,7 @@ import importlib.util
 from importlib.metadata import distributions as _distributions
 from pathlib import Path
 
-from apathetic_utils import has_glob_chars
+from apathetic_utils import cast_hint, has_glob_chars
 
 from zipbundler.build import build_zipapp
 from zipbundler.commands.validate import resolve_output_path_from_config
@@ -18,7 +18,7 @@ from zipbundler.config import (
     load_and_validate_config,
 )
 from zipbundler.logs import getAppLogger
-from zipbundler.utils import parse_include_with_dest
+from zipbundler.utils import resolve_includes
 
 
 def _resolve_installed_package(package_name: str) -> Path | None:
@@ -305,41 +305,62 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             logger.error("No valid packages found from patterns: %s", packages_list)
             return 1
 
-        # Parse add_include args (extend packages, not replace)
-        # Also collect additional file includes with destinations
-        additional_includes: list[tuple[Path, Path | None]] = []
-        if hasattr(args, "add_include") and args.add_include:
-            for raw_include in args.add_include:
-                inc, _has_dest = parse_include_with_dest(raw_include, cwd)
-                full_path = inc["path"]
-                dest = inc.get("dest")
+        # Resolve includes from config and CLI args with proper path semantics
+        # - config includes are relative to config file directory
+        # - CLI includes (--include, --add-include) are relative to cwd
+        config_dir = config_path.parent.resolve()
+        # Cast to dict[str, object] for resolve_includes function
+        raw_config = cast_hint(dict[str, object], config)
+        resolved_includes = resolve_includes(
+            raw_config, args=args, config_dir=config_dir, cwd=cwd
+        )
 
-                # Resolve the path - could be a directory or file
-                if isinstance(full_path, Path):
-                    # Try to resolve as a package pattern first
-                    # (handles cases like 'extra/pkg2' or glob patterns)
-                    resolved_pkgs = _resolve_package_pattern(
-                        str(full_path.relative_to(cwd)), cwd
-                    )
-                    if resolved_pkgs:
-                        # It's a package directory (or glob pattern matching dirs)
-                        for pkg in resolved_pkgs:
-                            if pkg not in packages:
-                                packages.append(pkg)
-                                logger.debug(
-                                    "Added package from --add-include: %s", pkg
-                                )
-                    elif full_path.is_file():
-                        # It's a file - track for inclusion
-                        additional_includes.append((full_path, dest))
+        # Separate includes into packages and additional files
+        additional_includes: list[tuple[Path, Path | None]] = []
+        for inc in resolved_includes:
+            full_path = inc["path"]
+            if isinstance(full_path, Path):
+                full_path_resolved = full_path
+            else:
+                # Path is relative to root
+                full_path_resolved = (inc["root"] / full_path).resolve()
+
+            dest = inc.get("dest")
+
+            # Try to resolve as a package pattern first
+            # (handles cases like 'extra/pkg2' or glob patterns)
+            try:
+                rel_to_cwd = full_path_resolved.relative_to(cwd)
+                resolved_pkgs = _resolve_package_pattern(str(rel_to_cwd), cwd)
+            except ValueError:
+                # full_path_resolved is outside cwd, skip package resolution
+                resolved_pkgs = []
+
+            if resolved_pkgs:
+                # It's a package directory (or glob pattern matching dirs)
+                for pkg in resolved_pkgs:
+                    if pkg not in packages:
+                        packages.append(pkg)
                         logger.debug(
-                            "Added file from --add-include: %s -> %s",
-                            full_path,
-                            dest or full_path.name,
+                            "Added package from include (origin: %s): %s",
+                            inc["origin"],
+                            pkg,
                         )
-                    else:
-                        # Path doesn't exist
-                        logger.warning("Add-include path does not exist: %s", full_path)
+            elif full_path_resolved.is_file():
+                # It's a file - track for inclusion
+                additional_includes.append((full_path_resolved, dest))
+                logger.debug(
+                    "Added file from include (origin: %s): %s -> %s",
+                    inc["origin"],
+                    full_path_resolved,
+                    dest or full_path_resolved.name,
+                )
+            else:
+                # Path doesn't exist or is an unresolved glob
+                logger.warning(
+                    "Include path does not exist or is unresolved: %s",
+                    full_path_resolved,
+                )
 
         # Extract output path
         output_config: OutputConfig | None = config.get("output")
