@@ -18,12 +18,58 @@ from .config_types import RootConfig
 from .config_validate import validate_config
 
 
+def _search_default_configs(
+    cwd: Path,
+) -> list[tuple[Path, dict[str, Any]]]:
+    """Search for default config files in cwd and parent directories.
+
+    Searches from cwd up to filesystem root, attempting to load each candidate
+    file. Files are loaded immediately during discovery and skipped if they
+    fail to load.
+
+    Returns:
+        List of (path, config) tuples for all valid configs at the first level
+        where configs were found.
+    """
+    logger = getAppLogger()
+    current = cwd
+    candidate_names = [
+        ".zipbundler.py",
+        ".zipbundler.jsonc",
+        ".zipbundler.json",
+        "pyproject.toml",
+    ]
+    found: list[tuple[Path, dict[str, Any]]] = []
+
+    while True:
+        for name in candidate_names:
+            candidate = current / name
+            if candidate.exists():
+                # Try to load the config file
+                try:
+                    raw_config = load_config(candidate)
+                    if raw_config is not None:
+                        found.append((candidate, raw_config))
+                except (ValueError, TypeError, RuntimeError) as e:
+                    # Log at TRACE and skip this file
+                    logger.trace(f"[find_config] Skipping {candidate.name}: {e}")
+        if found:
+            # Found at least one valid config file at this level
+            break
+        parent = current.parent
+        if parent == current:  # Reached filesystem root
+            break
+        current = parent
+
+    return found
+
+
 def find_config(
     config_path: str | None,
     cwd: Path,
     *,
     missing_level: str = "error",
-) -> Path | None:
+) -> tuple[Path, dict[str, Any]] | None:
     """Find configuration file.
 
     Search order:
@@ -43,7 +89,8 @@ def find_config(
         missing_level: Log level for missing config ("error" or "warning")
 
     Returns:
-        The first matching path, or None if no config was found.
+        (config_path, raw_config) tuple if config found, or None if no config
+        was found.
     """
     logger = getAppLogger()
 
@@ -57,50 +104,39 @@ def find_config(
         if config.is_dir():
             msg = f"Specified config path is a directory, not a file: {config}"
             raise ValueError(msg)
-        return config
+        # Load the explicit config file
+        raw_config = load_config(config)
+        if raw_config is None:
+            return None
+        return config, raw_config
 
-    # --- 2. Default candidate files (search current dir and parents) ---
-    # Search from cwd up to filesystem root, returning first match (closest to cwd)
-    current = cwd
-    candidate_names = [
-        ".zipbundler.py",
-        ".zipbundler.jsonc",
-        ".zipbundler.json",
-        "pyproject.toml",
-    ]
-    found: list[Path] = []
-    while True:
-        for name in candidate_names:
-            candidate = current / name
-            if candidate.exists():
-                found.append(candidate)
-        if found:
-            # Found at least one config file at this level
-            break
-        parent = current.parent
-        if parent == current:  # Reached filesystem root
-            break
-        current = parent
+    # --- 2. Search for default config files ---
+    found = _search_default_configs(cwd)
 
     if not found:
         logger.logDynamic(missing_level, f"No config file found in {cwd} or parents")
         return None
 
     # --- 3. Handle multiple matches at same level ---
-    # Prefer .zipbundler.py > .zipbundler.jsonc > .zipbundler.json > pyproject.toml
+    # Prefer .zipbundler.py > .zipbundler.jsonc > .zipbundler.json >
+    # pyproject.toml
     if len(found) > 1:
         # Prefer .py, then .jsonc, then .json, then .toml
         priority = {".py": 0, ".jsonc": 1, ".json": 2, ".toml": 3}
-        found_sorted = sorted(found, key=lambda p: priority.get(p.suffix, 99))
-        names = ", ".join(p.name for p in found_sorted)
+        found_sorted = sorted(found, key=lambda p: priority.get(p[0].suffix, 99))
+        names = ", ".join(p[0].name for p in found_sorted)
         logger.warning(
             "Multiple config files detected (%s); using %s.",
             names,
-            found_sorted[0].name,
+            found_sorted[0][0].name,
         )
-        return found_sorted[0]
-    logger.trace(f"[find_config] Found config: {found[0]}")
-    return found[0]
+        config_path_result, config_data = found_sorted[0]
+        logger.trace(f"[find_config] Found config: {config_path_result}")
+        return config_path_result, config_data
+
+    config_path_result, config_data = found[0]
+    logger.trace(f"[find_config] Found config: {config_path_result}")
+    return config_path_result, config_data
 
 
 def _load_jsonc_config(config_path: Path) -> dict[str, Any]:
@@ -337,18 +373,15 @@ def load_and_validate_config(
 
     # --- Find config file ---
     missing_level = "warning"  # Allow configless operation
-    found_config_path = find_config(
+    find_result = find_config(
         str(config_path) if config_path else None,
         cwd,
         missing_level=missing_level,
     )
-    if found_config_path is None:
+    if find_result is None:
         return None
 
-    # --- Load the raw config ---
-    raw_config = load_config(found_config_path)
-    if raw_config is None:
-        return None
+    found_config_path, raw_config = find_result
 
     # --- Parse structure into final form without types ---
     try:

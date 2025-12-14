@@ -362,7 +362,11 @@ def test_find_config_exported(tmp_path: Path) -> None:
             encoding="utf-8",
         )
 
-        found = zipbundler.find_config(None, tmp_path)
-        assert found == config_file
+        result = zipbundler.find_config(None, tmp_path)
+        assert result is not None
+        found_path, found_config = result
+        assert found_path == config_file
+        assert isinstance(found_config, dict)
+        assert "packages" in found_config
     finally:
         os.chdir(original_cwd)
