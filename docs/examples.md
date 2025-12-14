@@ -341,3 +341,58 @@ Fine-grained control over what gets included.
 }
 ```
 
+## Example 12: Adding Includes at Build Time
+
+Use `--add-include` to append additional files and directories at build time without modifying the config file.
+
+**.zipbundler.jsonc:**
+```jsonc
+{
+  "packages": ["src/my_app"],
+  "output": {
+    "path": "dist/my_app.pyz"
+  }
+}
+```
+
+**Build with additional files:**
+```bash
+# Append another package directory
+zipbundler build --add-include extras/plugins
+
+# Append multiple files with custom destinations
+zipbundler build \
+  --add-include config.yaml:etc/config.yaml \
+  --add-include README.md:docs/README.md \
+  --add-include data/default.db:data/default.db
+
+# Mix directories and files
+zipbundler build \
+  --add-include src/utils \
+  --add-include assets/icons:static/icons \
+  --add-include VERSION:VERSION
+```
+
+**Key Points:**
+- ✅ `--add-include` appends to config packages (doesn't replace them)
+- ✅ Use `path:dest` format for custom destinations
+- ✅ Supports directories (as packages) and individual files
+- ✅ CLI-only feature — not available in config files
+- ✅ Useful for adding data files, configs, or supplementary code at build time
+
+**Example: Building with Data Files**
+
+```bash
+# Config defines the main package
+zipbundler build \
+  --add-include config.json:etc/config.json \
+  --add-include templates/:templates/ \
+  --add-include data/initial.db:data/initial.db
+```
+
+This bundles:
+- Python code from `src/my_app/`
+- Configuration file at `etc/config.json` in the zip
+- Template files in `templates/` directory
+- Database file at `data/initial.db` in the zip
+

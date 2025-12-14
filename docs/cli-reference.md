@@ -65,13 +65,31 @@ zipbundler build [OPTIONS]
 
 **Options:**
 - `-c, --config PATH`: Path to configuration file (default: `.zipbundler.jsonc`)
+- `-i, --include PATHS`: Override include paths from config. Format: `path` or `path:dest`
+- `--add-include PATHS`: Additional include paths to append to config includes (CLI only). Format: `path` or `path:dest`
+- `-e, --exclude PATTERNS`: Override exclude patterns from config
 - `-o, --output PATH`: Override output path from config
-- `-p, --packages PACKAGES`: Override packages (comma-separated)
+- `-m, --main ENTRY_POINT`: Override entry point from config
+- `-p, --shebang PYTHON`: Override shebang from config
 - `--no-shebang`: Disable shebang insertion
+- `-c, --compress`: Compress files with deflate method
+- `--no-compress`: Disable compression
+- `--compression-level LEVEL`: Compression level 0-9 (only with --compress)
 - `--no-main-guard`: Disable main guard insertion
 - `--dry-run`: Preview what would be bundled without creating zip
+- `-f, --force`: Force rebuild even if up-to-date
+- `--strict`: Fail on configuration warnings
 - `-v, --verbose`: Increase verbosity
 - `-q, --quiet`: Reduce output
+
+**Include Path Format:**
+- `path`: Include directory/file, destination derived from source structure
+- `path:dest`: Include directory/file at custom destination in zip
+
+Destinations in the zip are relative paths. For example:
+- `config.json:etc/config.json` → file at root of zip: `etc/config.json`
+- `README.md:docs/README.md` → file at root of zip: `docs/README.md`
+- `src/lib` → includes all files from `src/lib` directory
 
 **Examples:**
 ```bash
@@ -81,11 +99,25 @@ zipbundler build
 # Build with custom config
 zipbundler build --config custom.jsonc
 
-# Build with overrides
-zipbundler build --output dist/custom.zip --packages "src/pkg1,src/pkg2"
+# Append additional directories to config packages
+zipbundler build --add-include extra/lib
+
+# Append multiple items with custom destinations
+zipbundler build \
+  --add-include config.json:etc/config.json \
+  --add-include README.md:docs/README.md
+
+# Override includes (replace config)
+zipbundler build --include "src/pkg1/**/*.py" "src/pkg2/**/*.py"
 
 # Preview without building
 zipbundler build --dry-run
+
+# Build with compression
+zipbundler build --compress --compression-level 9
+
+# Force rebuild
+zipbundler build --force
 ```
 
 ### `zipbundler init`
