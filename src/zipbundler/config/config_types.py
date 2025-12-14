@@ -5,12 +5,51 @@
 This module defines TypedDict schemas for all configuration structures.
 """
 
+from pathlib import Path
 from typing import Literal, TypedDict
+
+from typing_extensions import NotRequired
 
 
 # --- Literal types for enums ---
 
 CompressionMethod = Literal["deflate", "stored", "bzip2", "lzma"]
+OriginType = Literal["cli", "config"]
+
+
+# --- Resolved path types ---
+
+
+class PathResolved(TypedDict):
+    """Resolved path with its root context.
+
+    Used for files and directories that have been resolved to actual paths.
+    The `path` can be absolute (overriding root) or relative to root.
+
+    Fields:
+        path: Absolute or relative-to-root path, or a glob pattern
+        root: Canonical origin directory for path resolution (relative to cwd or config)
+        origin: Where the path originated (cli or config)
+        pattern: Original pattern before resolution (for logging/debugging)
+    """
+
+    path: Path | str
+    root: Path
+    origin: OriginType
+    pattern: NotRequired[str]
+
+
+class IncludeResolved(PathResolved):
+    """Resolved include with optional custom destination.
+
+    Extends PathResolved with an optional dest field to specify where
+    the included file/directory should be placed in the output zip.
+
+    Fields:
+        dest: Optional override for target name/path in the zip file
+    """
+
+    dest: NotRequired[Path]
 
 
 # --- Nested configuration types ---

@@ -18,6 +18,7 @@ from zipbundler.config import (
     load_and_validate_config,
 )
 from zipbundler.logs import getAppLogger
+from zipbundler.utils import parse_include_with_dest
 
 
 def _resolve_installed_package(package_name: str) -> Path | None:
@@ -304,6 +305,42 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             logger.error("No valid packages found from patterns: %s", packages_list)
             return 1
 
+        # Parse add_include args (extend packages, not replace)
+        # Also collect additional file includes with destinations
+        additional_includes: list[tuple[Path, Path | None]] = []
+        if hasattr(args, "add_include") and args.add_include:
+            for raw_include in args.add_include:
+                inc, _has_dest = parse_include_with_dest(raw_include, cwd)
+                full_path = inc["path"]
+                dest = inc.get("dest")
+
+                # Resolve the path - could be a directory or file
+                if isinstance(full_path, Path):
+                    # Try to resolve as a package pattern first
+                    # (handles cases like 'extra/pkg2' or glob patterns)
+                    resolved_pkgs = _resolve_package_pattern(
+                        str(full_path.relative_to(cwd)), cwd
+                    )
+                    if resolved_pkgs:
+                        # It's a package directory (or glob pattern matching dirs)
+                        for pkg in resolved_pkgs:
+                            if pkg not in packages:
+                                packages.append(pkg)
+                                logger.debug(
+                                    "Added package from --add-include: %s", pkg
+                                )
+                    elif full_path.is_file():
+                        # It's a file - track for inclusion
+                        additional_includes.append((full_path, dest))
+                        logger.debug(
+                            "Added file from --add-include: %s -> %s",
+                            full_path,
+                            dest or full_path.name,
+                        )
+                    else:
+                        # Path doesn't exist
+                        logger.warning("Add-include path does not exist: %s", full_path)
+
         # Extract output path
         output_config: OutputConfig | None = config.get("output")
         output_path = resolve_output_path_from_config(
@@ -434,6 +471,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             dry_run=getattr(args, "dry_run", False),
             metadata=metadata,
             force=getattr(args, "force", False),
+            additional_includes=additional_includes if additional_includes else None,
         )
     except (FileNotFoundError, ValueError, TypeError) as e:
         logger.errorIfNotDebug(str(e))

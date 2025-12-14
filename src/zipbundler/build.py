@@ -172,6 +172,7 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     main_guard: bool = True,
     metadata: dict[str, str] | None = None,
     force: bool = False,
+    additional_includes: list[tuple[Path, Path | None]] | None = None,
 ) -> None:
     """Build a zipapp-compatible zip file.
 
@@ -197,6 +198,9 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
         force: If True, always rebuild even if output is up-to-date.
             Defaults to False. When False, skips rebuild if output is newer
             than all sources.
+        additional_includes: Optional list of (file_path, destination) tuples
+            for individual files to include in the zip. If destination is None,
+            uses the file's basename. Useful for including data files or configs.
 
     Raises:
         ValueError: If output path is invalid or packages are empty
@@ -256,6 +260,17 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 continue
             files_to_include.append((f, arcname))
             logger.trace("Added file: %s -> %s", f, arcname)
+
+    # Add additional individual files (from --add-include)
+    if additional_includes:
+        for file_path, dest in additional_includes:
+            if not file_path.exists():
+                logger.warning("Additional include file does not exist: %s", file_path)
+                continue
+            # Use provided destination or file's basename
+            arcname = Path(dest) if dest else Path(file_path.name)
+            files_to_include.append((file_path, arcname))
+            logger.trace("Added additional file: %s -> %s", file_path, arcname)
 
     # Count entry point in file count if provided
     file_count = len(files_to_include) + (1 if entry_point is not None else 0)

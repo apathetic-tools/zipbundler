@@ -204,7 +204,7 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         help=argparse.SUPPRESS,
     )
 
-    # additional includes
+    # additional includes (CLI only, not available in config files)
     build_flags.add_argument(
         "--add-include",
         action="extend",
@@ -212,8 +212,9 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         metavar="PATH",
         dest="add_include",
         help=(
-            "Additional include paths (relative to cwd). "
-            "Format: path or path:dest. Extends config includes."
+            "Additional include paths to append to config includes (CLI only). "
+            "Format: path or path:dest. Supports files and directories. "
+            "Relative to current working directory."
         ),
     )
 
@@ -513,6 +514,7 @@ def _prepare_build_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
         build_args.compress = None
     build_args.compression_level = getattr(parsed_args, "compress_level", None)
     build_args.include = getattr(parsed_args, "include", None)
+    build_args.add_include = getattr(parsed_args, "add_include", None)
     build_args.exclude = getattr(parsed_args, "exclude", None)
     # main_guard removed (handled via config)
     build_args.dry_run = getattr(parsed_args, "dry_run", False)

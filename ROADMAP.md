@@ -16,6 +16,8 @@ Some of these we just want to consider, and may not want to implement.
 The following CLI arguments are defined in `cli.py` but not yet used in command handlers:
 
 #### Build Flags
+- align our implementation of `--include` and config file include with serger's
+- align our implementation of `--exclude` and config file exclude with serger's
 - **`--add-include`** / `add_include`: Additional include paths (relative to cwd). Format: path or path:dest. Extends config includes.
 - **`--add-exclude`** / `add_exclude`: Additional exclude patterns (relative to cwd). Extends config excludes.
 - **`--input`** / `--in` / `input`: Override the name of the input file or directory. Start from an existing build (usually optional).
