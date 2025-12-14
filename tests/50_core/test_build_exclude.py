@@ -5,6 +5,7 @@ import zipfile
 from pathlib import Path
 
 import zipbundler.build as mod_build
+import zipbundler.utils as mod_utils
 
 
 EXPECTED_FILE_COUNT_TWO = 2
@@ -22,10 +23,11 @@ def test_build_zipapp_exclude_simple_pattern(tmp_path: Path) -> None:
     output = tmp_path / "output.pyz"
 
     # Build with exclude pattern for test files
+    excludes = [mod_utils.make_exclude_resolved("**/test_*.py", tmp_path, "config")]
     mod_build.build_zipapp(
         output=output,
         packages=[pkg_dir],
-        exclude=["**/test_*.py"],
+        exclude=excludes,
     )
 
     # Verify zip was created
@@ -64,10 +66,11 @@ def test_build_zipapp_exclude_directory_pattern(tmp_path: Path) -> None:
     output = tmp_path / "output.pyz"
 
     # Build with exclude pattern for tests directory
+    excludes = [mod_utils.make_exclude_resolved("**/tests/**", tmp_path, "config")]
     mod_build.build_zipapp(
         output=output,
         packages=[pkg_dir],
-        exclude=["**/tests/**"],
+        exclude=excludes,
     )
 
     # Verify zip was created
@@ -99,10 +102,14 @@ def test_build_zipapp_exclude_multiple_patterns(tmp_path: Path) -> None:
     output = tmp_path / "output.pyz"
 
     # Build with multiple exclude patterns
+    excludes = [
+        mod_utils.make_exclude_resolved("**/test_*.py", tmp_path, "config"),
+        mod_utils.make_exclude_resolved("**/temp_*.py", tmp_path, "config"),
+    ]
     mod_build.build_zipapp(
         output=output,
         packages=[pkg_dir],
-        exclude=["**/test_*.py", "**/temp_*.py"],
+        exclude=excludes,
     )
 
     # Verify zip was created
@@ -156,7 +163,8 @@ def test_list_files_exclude_simple_pattern(tmp_path: Path) -> None:
     (pkg_dir / "test_module.py").write_text("def test_func():\n    pass\n")
 
     # List files with exclude pattern
-    files = mod_build.list_files([pkg_dir], exclude=["**/test_*.py"])
+    excludes = [mod_utils.make_exclude_resolved("**/test_*.py", tmp_path, "config")]
+    files = mod_build.list_files([pkg_dir], exclude=excludes)
 
     # Should find 2 files (excluding test_module.py)
     assert len(files) == EXPECTED_FILE_COUNT_TWO
@@ -181,7 +189,8 @@ def test_list_files_exclude_directory_pattern(tmp_path: Path) -> None:
     (tests_dir / "test_module.py").write_text("def test_func():\n    pass\n")
 
     # List files with exclude pattern
-    files = mod_build.list_files([pkg_dir], exclude=["**/tests/**"])
+    excludes = [mod_utils.make_exclude_resolved("**/tests/**", tmp_path, "config")]
+    files = mod_build.list_files([pkg_dir], exclude=excludes)
 
     # Should find 2 files (excluding tests directory)
     assert len(files) == EXPECTED_FILE_COUNT_TWO
@@ -219,10 +228,11 @@ def test_build_zipapp_exclude_dry_run(tmp_path: Path) -> None:
     output = tmp_path / "output.pyz"
 
     # Build with exclude pattern in dry run mode
+    excludes = [mod_utils.make_exclude_resolved("**/test_*.py", tmp_path, "config")]
     mod_build.build_zipapp(
         output=output,
         packages=[pkg_dir],
-        exclude=["**/test_*.py"],
+        exclude=excludes,
         dry_run=True,
     )
 

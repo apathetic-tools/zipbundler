@@ -2,12 +2,14 @@
 
 """Programmatic API for zipbundler."""
 
+from __future__ import annotations
+
 import shutil
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apathetic_utils import find_all_packages_under_path, has_glob_chars
 
@@ -21,6 +23,11 @@ from .config import (
 )
 from .constants import DEFAULT_WATCH_INTERVAL
 from .logs import getAppLogger
+from .utils import make_exclude_resolved
+
+
+if TYPE_CHECKING:
+    from .config.config_types import PathResolved
 
 
 def _resolve_packages_for_api(  # noqa: C901, PLR0912
@@ -364,6 +371,13 @@ def build_zip(  # noqa: C901, PLR0912, PLR0913, PLR0915
     else:
         shebang = None
 
+    # Convert exclude strings to PathResolved objects
+    resolved_excludes: list[PathResolved] | None = None
+    if exclude:
+        resolved_excludes = [
+            make_exclude_resolved(pattern, cwd, "cli") for pattern in exclude
+        ]
+
     # Build the zipapp
     build_zipapp(
         output=output_path,
@@ -372,7 +386,7 @@ def build_zip(  # noqa: C901, PLR0912, PLR0913, PLR0915
         shebang=shebang,
         compression=compression,
         compression_level=compression_level,
-        exclude=exclude,
+        exclude=resolved_excludes,
         main_guard=main_guard,
         metadata=metadata,
         force=False,  # API doesn't expose force, use default incremental behavior
@@ -380,7 +394,7 @@ def build_zip(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
     # Calculate result
     duration = time.time() - start_time
-    file_count = len(list_files(resolved_packages, exclude=exclude))
+    file_count = len(list_files(resolved_packages, exclude=resolved_excludes))
     if entry_point_code:
         file_count += 1  # Include __main__.py
     size_bytes = output_path.stat().st_size
@@ -393,7 +407,7 @@ def build_zip(  # noqa: C901, PLR0912, PLR0913, PLR0915
     )
 
 
-def watch(  # noqa: PLR0912
+def watch(  # noqa: PLR0912, C901
     config_path: str | Path | None = None,
     *,
     packages: list[str] | None = None,
@@ -471,6 +485,13 @@ def watch(  # noqa: PLR0912
         msg = f"No valid packages found from patterns: {packages}"
         raise ValueError(msg)
 
+    # Convert exclude strings to PathResolved objects
+    resolved_excludes: list[PathResolved] | None = None
+    if exclude:
+        resolved_excludes = [
+            make_exclude_resolved(pattern, cwd, "cli") for pattern in exclude
+        ]
+
     # Create rebuild function
     def rebuild() -> None:
         result = build_zip(
@@ -488,5 +509,5 @@ def watch(  # noqa: PLR0912
         packages=resolved_packages,
         output=output_path,
         interval=interval,
-        exclude=exclude,
+        exclude=resolved_excludes,
     )

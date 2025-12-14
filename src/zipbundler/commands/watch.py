@@ -9,6 +9,7 @@ from zipbundler.actions import watch_for_changes
 from zipbundler.build import build_zipapp
 from zipbundler.constants import DEFAULT_WATCH_INTERVAL
 from zipbundler.logs import getAppLogger
+from zipbundler.utils import resolve_excludes
 
 
 def handle_watch_command(args: argparse.Namespace) -> int:
@@ -26,9 +27,14 @@ def handle_watch_command(args: argparse.Namespace) -> int:
     try:
         packages = [Path(p) for p in args.include]
         output = Path(args.output)
+        cwd = Path.cwd()
 
         # Determine watch interval
         interval = args.watch if args.watch is not None else DEFAULT_WATCH_INTERVAL
+
+        # Resolve excludes from CLI arguments (no config file in watch mode)
+        # Watch only uses CLI excludes, so config=None and config_dir=cwd
+        excludes = resolve_excludes(None, args=args, config_dir=cwd, cwd=cwd)
 
         # Build rebuild function
         def rebuild() -> None:
@@ -39,7 +45,7 @@ def handle_watch_command(args: argparse.Namespace) -> int:
                 entry_point=args.entry_point,
                 shebang=args.shebang or "#!/usr/bin/env python3",
                 compression=compression,
-                exclude=args.exclude,
+                exclude=excludes,
                 main_guard=getattr(args, "main_guard", True),
                 force=False,  # Watch handles change detection, use incremental builds
             )
@@ -50,7 +56,7 @@ def handle_watch_command(args: argparse.Namespace) -> int:
             packages=packages,
             output=output,
             interval=interval,
-            exclude=args.exclude,
+            exclude=excludes,
         )
     except (ValueError, FileNotFoundError) as e:
         logger.errorIfNotDebug(str(e))

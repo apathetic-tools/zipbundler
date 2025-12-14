@@ -8,6 +8,7 @@ from pathlib import Path
 
 from apathetic_utils import detect_runtime_mode, load_toml, run_with_output
 
+from .config.config_types import PathResolved
 from .constants import DEFAULT_WATCH_INTERVAL
 from .logs import getAppLogger
 from .meta import PROGRAM_PACKAGE, Metadata
@@ -111,21 +112,21 @@ def get_metadata() -> Metadata:
 
 def collect_watched_files(
     packages: list[Path],
-    exclude: list[str] | None = None,
+    exclude: list[PathResolved] | None = None,
 ) -> list[Path]:
     """Collect all Python files from packages for watching.
 
     Args:
         packages: List of package directories to watch
-        exclude: Optional list of glob patterns for files/directories to exclude
+        exclude: Optional list of resolved exclude patterns (PathResolved objects)
 
     Returns:
         List of unique sorted file paths to watch
     """
     from .build import list_files  # noqa: PLC0415
 
-    exclude_patterns = exclude or []
-    files = list_files(packages, exclude=exclude_patterns)
+    excludes = exclude or []
+    files = list_files(packages, exclude=excludes)
 
     # Return unique sorted list of file paths
     return sorted({file_path for file_path, _arcname in files})
@@ -136,7 +137,7 @@ def watch_for_changes(
     packages: list[Path],
     output: Path,
     interval: float = DEFAULT_WATCH_INTERVAL,
-    exclude: list[str] | None = None,
+    exclude: list[PathResolved] | None = None,
 ) -> None:
     """Poll file modification times and rebuild when changes are detected.
 
@@ -151,7 +152,7 @@ def watch_for_changes(
         packages: List of package directories to watch
         output: Output file path (files inside this path are ignored)
         interval: Polling interval in seconds
-        exclude: Optional list of glob patterns for files/directories to exclude
+        exclude: Optional list of resolved exclude patterns (PathResolved objects)
     """
     logger = getAppLogger()
     logger.info(

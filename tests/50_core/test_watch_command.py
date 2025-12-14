@@ -10,6 +10,7 @@ import pytest
 
 import zipbundler.actions as mod_actions
 import zipbundler.cli as mod_main
+import zipbundler.utils as mod_utils
 
 
 EXPECTED_FILE_COUNT_BASIC = 2
@@ -43,7 +44,8 @@ def test_collect_watched_files_with_exclude(tmp_path: Path) -> None:
     (pkg_dir / "tests").mkdir()
     (pkg_dir / "tests" / "test_module.py").write_text("def test_func():\n    pass\n")
 
-    files = mod_actions.collect_watched_files([pkg_dir], exclude=["**/tests/**"])
+    excludes = [mod_utils.make_exclude_resolved("**/tests/**", tmp_path, "config")]
+    files = mod_actions.collect_watched_files([pkg_dir], exclude=excludes)
 
     # Should find 2 files (excluding tests)
     assert len(files) == EXPECTED_FILE_COUNT_BASIC

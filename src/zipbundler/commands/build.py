@@ -18,7 +18,7 @@ from zipbundler.config import (
     load_and_validate_config,
 )
 from zipbundler.logs import getAppLogger
-from zipbundler.utils import resolve_includes
+from zipbundler.utils import resolve_excludes, resolve_includes
 
 
 def _resolve_installed_package(package_name: str) -> Path | None:
@@ -379,11 +379,12 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         if entry_point_str:
             entry_point_code = extract_entry_point_code(entry_point_str)
 
-        # Extract exclude patterns
-        exclude: list[str] | None = config.get("exclude")
-        if exclude and not isinstance(exclude, list):  # pyright: ignore[reportUnnecessaryIsInstance]
-            logger.warning("exclude field must be a list, ignoring")
-            exclude = None
+        # Resolve excludes from config and CLI args with proper path semantics
+        # - config excludes are relative to config file directory
+        # - CLI excludes (--exclude, --add-exclude) are relative to cwd
+        excludes = resolve_excludes(
+            raw_config, args=args, config_dir=config_dir, cwd=cwd
+        )
 
         # Extract metadata
         metadata_config: MetadataConfig | None = config.get("metadata")
@@ -470,8 +471,6 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             # compression_level only applies to deflate, ensure compression is deflate
             if compression != "deflate":
                 compression = "deflate"
-        if hasattr(args, "exclude") and args.exclude:
-            exclude = args.exclude
         if hasattr(args, "main_guard") and args.main_guard is not None:
             main_guard = args.main_guard
         if hasattr(args, "dry_run") and args.dry_run:
@@ -487,7 +486,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             shebang=shebang,
             compression=compression,
             compression_level=compression_level,
-            exclude=exclude,
+            exclude=excludes,
             main_guard=main_guard,
             dry_run=getattr(args, "dry_run", False),
             metadata=metadata,

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from apathetic_utils import is_excluded_raw
 
+from .config.config_types import PathResolved
 from .constants import DEFAULT_SOURCE_BASES
 from .logs import getAppLogger
 
@@ -51,29 +52,37 @@ def _generate_pkg_info(metadata: dict[str, str] | None) -> str | None:
     return "\n".join(lines) + "\n"
 
 
-def _matches_exclude_pattern(
-    file_path: Path, _arcname: Path, exclude_patterns: list[str], root: Path
-) -> bool:
+def _matches_exclude_pattern(file_path: Path, excludes: list[PathResolved]) -> bool:
     """Check if a path matches any exclude pattern.
 
-    Uses apathetic_utils.is_excluded_raw for portable, cross-platform pattern matching.
+    Each exclude pattern has its own root context for pattern matching.
+    Uses apathetic_utils.is_excluded_raw for portable, cross-platform matching.
 
     Args:
-        file_path: Absolute file path
-        _arcname: Relative path that will be used in the zip archive
-            (unused, kept for API consistency)
-        exclude_patterns: List of glob patterns to match against
-        root: Root directory for resolving relative patterns
+        file_path: Absolute file path to check
+        excludes: List of resolved exclude patterns (each with path and root)
 
     Returns:
         True if the path matches any exclude pattern, False otherwise
     """
-    if not exclude_patterns:
+    if not excludes:
         return False
 
-    # Use apathetic_utils for portable pattern matching
-    # It handles ** patterns, cross-platform path separators, and root-relative patterns
-    return is_excluded_raw(file_path, exclude_patterns, root)
+    # Check file against all excludes, using each exclude's root
+    logger = getAppLogger()
+    for exc in excludes:
+        exclude_root = Path(exc["root"]).resolve()
+        exclude_patterns = [str(exc["path"])]
+        if is_excluded_raw(file_path, exclude_patterns, exclude_root):
+            logger.trace(
+                "[EXCLUDE] Excluded %s by pattern %s (root: %s)",
+                file_path,
+                exc["path"],
+                exclude_root,
+            )
+            return True
+
+    return False
 
 
 def _get_compression_method(compression: str | None) -> tuple[int, str]:
@@ -168,7 +177,7 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     compression: str | None = None,
     compression_level: int | None = None,
     dry_run: bool = False,
-    exclude: list[str] | None = None,
+    exclude: list[PathResolved] | None = None,
     main_guard: bool = True,
     metadata: dict[str, str] | None = None,
     force: bool = False,
@@ -189,7 +198,7 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
             Only used when compression="deflate". Defaults to 6 if not specified.
             Higher values = more compression but slower.
         dry_run: If True, preview what would be bundled without creating zip.
-        exclude: Optional list of glob patterns for files/directories to exclude.
+        exclude: Optional list of resolved exclude patterns (PathResolved objects).
         main_guard: If True, wrap entry point in `if __name__ == "__main__":` guard.
             Defaults to True. Only applies when entry_point is provided.
         metadata: Optional dictionary with metadata fields (display_name, description,
@@ -215,7 +224,7 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     # Default compression level is 6 (zlib default) if not specified for deflate
     if compression_level is None and compression_name == "deflate":
         compression_level = 6
-    exclude_patterns = exclude or []
+    excludes = exclude or []
     logger.debug("Building zipapp: %s", output)
     logger.debug("Packages: %s", [str(p) for p in packages])
     logger.debug("Entry point: %s", entry_point)
@@ -224,8 +233,8 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     else:
         logger.debug("Compression: %s", compression_name)
     logger.debug("Dry run: %s", dry_run)
-    if exclude_patterns:
-        logger.debug("Exclude patterns: %s", exclude_patterns)
+    if excludes:
+        logger.debug("Exclude patterns: %s", [e["path"] for e in excludes])
 
     # Collect files that would be included
     files_to_include: list[tuple[Path, Path]] = []
@@ -237,25 +246,25 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
             logger.warning("Package path does not exist: %s", pkg_path)
             continue
 
-        # Determine the exclude root:
+        # Determine the archive root:
         # If the package is a common source directory (src, lib, packages),
-        # use it as the exclude root so packages end up at the root of the zip.
+        # use it as the root so packages end up at the root of the zip.
         # Otherwise, use the package parent.
         # This ensures src/zipbundler ends up as zipbundler/ not src/zipbundler/
-        exclude_root = pkg_path.parent
+        archive_root = pkg_path.parent
         if pkg_path.name in DEFAULT_SOURCE_BASES:
             # This is a source directory - use it as root so packages extract to root
-            exclude_root = pkg_path
+            archive_root = pkg_path
             logger.trace(
-                "Detected source directory '%s', using it as exclude root",
+                "Detected source directory '%s', using it as archive root",
                 pkg_path.name,
             )
 
         for f in pkg_path.rglob("*.py"):
-            # Calculate relative path from exclude root
-            arcname = f.relative_to(exclude_root)
-            # Check if file matches exclude patterns
-            if _matches_exclude_pattern(f, arcname, exclude_patterns, exclude_root):
+            # Calculate relative path from archive root (for archive names only)
+            arcname = f.relative_to(archive_root)
+            # Check if file matches exclude patterns (each pattern has its own root)
+            if _matches_exclude_pattern(f, excludes):
                 logger.trace("Excluded file: %s (matched pattern)", f)
                 continue
             files_to_include.append((f, arcname))
@@ -363,14 +372,14 @@ def list_files(
     packages: list[Path],
     *,
     count: bool = False,
-    exclude: list[str] | None = None,
+    exclude: list[PathResolved] | None = None,
 ) -> list[tuple[Path, Path]]:
     """List files that would be included in a zipapp bundle.
 
     Args:
         packages: List of package directories to scan
         count: If True, only return count (empty list, count in logger)
-        exclude: Optional list of glob patterns for files/directories to exclude.
+        exclude: Optional list of resolved exclude patterns (PathResolved objects).
 
     Returns:
         List of tuples (file_path, arcname) for files that would be included
@@ -381,9 +390,9 @@ def list_files(
         xmsg = "At least one package must be provided"
         raise ValueError(xmsg)
 
-    exclude_patterns = exclude or []
-    if exclude_patterns:
-        logger.debug("Exclude patterns: %s", exclude_patterns)
+    excludes = exclude or []
+    if excludes:
+        logger.debug("Exclude patterns: %s", [e["path"] for e in excludes])
 
     files_to_include: list[tuple[Path, Path]] = []
 
@@ -394,14 +403,14 @@ def list_files(
             logger.warning("Package path does not exist: %s", pkg_path)
             continue
 
-        # Use package parent as root for exclude pattern matching
-        exclude_root = pkg_path.parent
+        # Use package parent as archive root for relative paths
+        archive_root = pkg_path.parent
 
         for f in pkg_path.rglob("*.py"):
-            # Calculate relative path from package parent
-            arcname = f.relative_to(exclude_root)
-            # Check if file matches exclude patterns
-            if _matches_exclude_pattern(f, arcname, exclude_patterns, exclude_root):
+            # Calculate relative path from package parent (for archive names only)
+            arcname = f.relative_to(archive_root)
+            # Check if file matches exclude patterns (each pattern has its own root)
+            if _matches_exclude_pattern(f, excludes):
                 logger.trace("Excluded file: %s (matched pattern)", f)
                 continue
             files_to_include.append((f, arcname))
