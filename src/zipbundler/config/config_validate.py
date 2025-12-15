@@ -40,6 +40,8 @@ FIELD_EXAMPLES: dict[str, str] = {
     "root.options.shebang": 'true or "/usr/bin/env python3"',
     "root.options.insert_main": "true",
     "root.options.main_guard": "true",
+    "root.options.main_mode": '"auto"',
+    "root.options.main_name": '"main"',
     "root.options.compression": '"deflate"',
     "root.options.compression_level": "9",
     "root.metadata.display_name": '"My Package"',
@@ -74,6 +76,60 @@ def _validate_entry_point_format(entry_point: str) -> tuple[bool, str]:
         msg = (
             f"Invalid entry point format: '{entry_point}'. "
             "Expected format: 'module.path:function' or 'module.path'"
+        )
+        return False, msg
+
+    return True, ""
+
+
+def _validate_main_mode(main_mode: str) -> tuple[bool, str]:
+    """Validate main_mode value.
+
+    Expected values: "auto" or other documented modes
+
+    Returns:
+        (is_valid, error_message)
+    """
+    if not isinstance(main_mode, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+        msg = f"main_mode must be a string, got {type(main_mode).__name__}"
+        return False, msg
+
+    if not main_mode.strip():
+        msg = "main_mode must be a non-empty string"
+        return False, msg
+
+    # Currently only "auto" is implemented
+    if main_mode not in ("auto",):
+        msg = f"Unknown main_mode '{main_mode}'. Valid options: 'auto'"
+        return False, msg
+
+    return True, ""
+
+
+def _validate_main_name(main_name: str | None) -> tuple[bool, str]:
+    """Validate main_name value.
+
+    Expected: None (auto-detect) or a valid Python identifier
+
+    Returns:
+        (is_valid, error_message)
+    """
+    if main_name is None:
+        return True, ""
+
+    if not isinstance(main_name, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+        msg = f"main_name must be a string or null, got {type(main_name).__name__}"
+        return False, msg
+
+    if not main_name.strip():
+        msg = "main_name must be a non-empty string or null"
+        return False, msg
+
+    # Validate that main_name is a valid Python identifier
+    if not main_name.isidentifier():
+        msg = (
+            f"Invalid main_name '{main_name}'. "
+            "Must be a valid Python identifier (e.g., 'main', 'run', 'cli')"
         )
         return False, msg
 
@@ -135,7 +191,7 @@ def _set_valid_and_return(
     return summary
 
 
-def _validate_custom_rules(  # noqa: C901, PLR0912
+def _validate_custom_rules(  # noqa: C901, PLR0912, PLR0915
     parsed_cfg: dict[str, Any],
     *,
     cwd: Path,
@@ -184,6 +240,30 @@ def _validate_custom_rules(  # noqa: C901, PLR0912
                 summary=summary,
                 is_error=True,
             )
+
+        # Validate main_mode
+        main_mode: str | None = options.get("main_mode")  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+        if main_mode is not None:
+            is_valid, error_msg = _validate_main_mode(main_mode)
+            if not is_valid:
+                collect_msg(
+                    f"Field 'options.main_mode': {error_msg}",
+                    strict=strict_config,
+                    summary=summary,
+                    is_error=False,
+                )
+
+        # Validate main_name
+        main_name: str | None = options.get("main_name")  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+        if main_name is not None:
+            is_valid, error_msg = _validate_main_name(main_name)
+            if not is_valid:
+                collect_msg(
+                    f"Field 'options.main_name': {error_msg}",
+                    strict=strict_config,
+                    summary=summary,
+                    is_error=False,
+                )
 
         compression: str | None = options.get("compression")  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
         compression_level: int | None = options.get("compression_level")  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]

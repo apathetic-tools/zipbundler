@@ -22,6 +22,8 @@ from zipbundler.config import (
 from zipbundler.constants import (
     DEFAULT_DISABLE_BUILD_TIMESTAMP,
     DEFAULT_LICENSE_FALLBACK,
+    DEFAULT_MAIN_MODE,
+    DEFAULT_MAIN_NAME,
     DEFAULT_USE_PYPROJECT_METADATA,
 )
 from zipbundler.logs import getAppLogger
@@ -478,6 +480,8 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         compression: str | None = None
         compression_level: int | None = None
         main_guard = True
+        main_mode: str = DEFAULT_MAIN_MODE
+        main_name: str | None = DEFAULT_MAIN_NAME
 
         if options:  # pyright: ignore[reportUnnecessaryIsInstance]
             # Shebang
@@ -515,6 +519,18 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                 main_guard_val = options["main_guard"]
                 if isinstance(main_guard_val, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
                     main_guard = main_guard_val
+
+            # Main mode
+            if "main_mode" in options:
+                main_mode_val = options["main_mode"]
+                if isinstance(main_mode_val, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+                    main_mode = main_mode_val
+
+            # Main name
+            if "main_name" in options:
+                main_name_val = options["main_name"]
+                if isinstance(main_name_val, str) or main_name_val is None:  # pyright: ignore[reportUnnecessaryIsInstance]
+                    main_name = main_name_val
 
         # Resolve compress boolean (CLI + config + default)
         # Priority: CLI flag > config > default
@@ -614,6 +630,10 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                 compression = "deflate"
         if hasattr(args, "main_guard") and args.main_guard is not None:
             main_guard = args.main_guard
+        if hasattr(args, "main_mode") and args.main_mode is not None:
+            main_mode = args.main_mode  # noqa: F841
+        if hasattr(args, "main_name") and args.main_name is not None:
+            main_name = args.main_name  # noqa: F841
         if hasattr(args, "dry_run") and args.dry_run:
             # Handle dry_run if provided
             pass

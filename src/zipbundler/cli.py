@@ -382,6 +382,28 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         help="Disable main insertion.",
     )
 
+    # main mode
+    build_opts.add_argument(
+        "--main-mode",
+        dest="main_mode",
+        default=None,
+        help=(
+            "Mode for main function detection (default: 'auto'). "
+            "Set via config or environment variable MAIN_MODE."
+        ),
+    )
+
+    # main name
+    build_opts.add_argument(
+        "--main-name",
+        dest="main_name",
+        default=None,
+        help=(
+            "Name to use for main function (default: None, auto-detect). "
+            "Set via config or environment variable MAIN_NAME."
+        ),
+    )
+
     # compress
     compress = build_opts.add_mutually_exclusive_group()
     compress.add_argument(
@@ -544,6 +566,8 @@ def _prepare_build_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
     build_args.input = parsed_args.input
     build_args.input_mode = getattr(parsed_args, "input_mode", "append")
     build_args.entry_point = parsed_args.entry_point
+    build_args.main_mode = getattr(parsed_args, "main_mode", None)
+    build_args.main_name = getattr(parsed_args, "main_name", None)
     build_args.shebang = parsed_args.shebang
     # Handle --compress, --no-compress, and compression_level
     if hasattr(parsed_args, "compress") and parsed_args.compress is False:
@@ -598,6 +622,8 @@ def _prepare_watch_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
     watch_args.include = parsed_args.include if parsed_args.include else []
     watch_args.output = parsed_args.output
     watch_args.entry_point = parsed_args.entry_point
+    watch_args.main_mode = getattr(parsed_args, "main_mode", None)
+    watch_args.main_name = getattr(parsed_args, "main_name", None)
     watch_args.shebang = parsed_args.shebang
     watch_args.compress = parsed_args.compress
     watch_args.exclude = getattr(parsed_args, "exclude", None)

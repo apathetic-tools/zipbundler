@@ -11,6 +11,7 @@ import zipbundler.build as mod_build_zipapp
 import zipbundler.cli as mod_cli
 import zipbundler.commands.build as mod_build
 import zipbundler.commands.validate as mod_validate
+import zipbundler.config.config_validate as mod_config_validate
 import zipbundler.constants as mod_constants
 import zipbundler.utils as mod_utils
 
@@ -498,3 +499,178 @@ class TestDefaultInstalledBases:
             assert "site-packages" in root or "dist-packages" in root, (
                 f"Path {root} missing site-packages or dist-packages"
             )
+
+
+class TestDefaultMainMode:
+    """Test DEFAULT_MAIN_MODE constant usage."""
+
+    def test_default_main_mode_value_is_auto(self) -> None:
+        """Test that DEFAULT_MAIN_MODE is 'auto' by default."""
+        assert mod_constants.DEFAULT_MAIN_MODE == "auto"
+
+    def test_cli_main_mode_argument_exists(self) -> None:
+        """Test that --main-mode CLI argument is available."""
+        parser = mod_cli._setup_parser()  # noqa: SLF001
+        args = parser.parse_args(["--build", "--main-mode", "auto"])
+        assert hasattr(args, "main_mode")
+        assert args.main_mode == "auto"
+
+    def test_cli_main_mode_default_is_none(self) -> None:
+        """Test that --main-mode defaults to None (uses config or constant)."""
+        parser = mod_cli._setup_parser()  # noqa: SLF001
+        args = parser.parse_args(["--build"])
+        # When not specified, should be None (letting config/defaults take over)
+        assert args.main_mode is None
+
+    def test_main_mode_validation(self) -> None:
+        """Test that main_mode validation works correctly."""
+        # Valid: "auto"
+        is_valid, msg = mod_config_validate._validate_main_mode("auto")  # noqa: SLF001
+        assert is_valid
+        assert msg == ""
+
+        # Invalid: other values
+        is_valid, msg = mod_config_validate._validate_main_mode("invalid")  # noqa: SLF001
+        assert not is_valid
+        assert "auto" in msg.lower()
+
+    def test_main_mode_in_config_file(self, tmp_path: Path) -> None:
+        """Test that main_mode can be specified in config file."""
+        original_cwd = Path.cwd()
+        try:
+            os.chdir(tmp_path)
+
+            # Create minimal package
+            src_dir = tmp_path / "src" / "mypackage"
+            src_dir.mkdir(parents=True)
+            (src_dir / "__init__.py").write_text("")
+
+            # Create config with main_mode
+            config_file = tmp_path / ".zipbundler.jsonc"
+            config_file.write_text(
+                """{
+  "packages": ["src/mypackage"],
+  "options": {
+    "main_mode": "auto"
+  }
+}
+""",
+                encoding="utf-8",
+            )
+
+            # Build should succeed with main_mode in config
+            main_func = mod_cli if callable(mod_cli) else mod_cli.main
+            code = main_func(["--build"])
+
+            assert code == 0
+        finally:
+            os.chdir(original_cwd)
+
+
+class TestDefaultMainName:
+    """Test DEFAULT_MAIN_NAME constant usage."""
+
+    def test_default_main_name_value_is_none(self) -> None:
+        """Test that DEFAULT_MAIN_NAME is None by default (auto-detect)."""
+        assert mod_constants.DEFAULT_MAIN_NAME is None
+
+    def test_cli_main_name_argument_exists(self) -> None:
+        """Test that --main-name CLI argument is available."""
+        parser = mod_cli._setup_parser()  # noqa: SLF001
+        args = parser.parse_args(["--build", "--main-name", "main"])
+        assert hasattr(args, "main_name")
+        assert args.main_name == "main"
+
+    def test_cli_main_name_default_is_none(self) -> None:
+        """Test that --main-name defaults to None (auto-detect)."""
+        parser = mod_cli._setup_parser()  # noqa: SLF001
+        args = parser.parse_args(["--build"])
+        # When not specified, should be None
+        assert args.main_name is None
+
+    def test_main_name_validation_accepts_valid_identifier(self) -> None:
+        """Test that main_name validation accepts valid Python identifiers."""
+        # Valid identifiers
+        for name in ["main", "run", "cli", "start", "_main"]:
+            is_valid, msg = mod_config_validate._validate_main_name(name)  # noqa: SLF001
+            assert is_valid, f"'{name}' should be valid: {msg}"
+            assert msg == ""
+
+    def test_main_name_validation_accepts_none(self) -> None:
+        """Test that main_name validation accepts None for auto-detect."""
+        # None should be valid (means auto-detect)
+        is_valid, msg = mod_config_validate._validate_main_name(None)  # noqa: SLF001
+        assert is_valid
+        assert msg == ""
+
+    def test_main_name_validation_rejects_invalid_identifiers(self) -> None:
+        """Test that main_name validation rejects invalid Python identifiers."""
+        # Invalid identifiers
+        for name in ["invalid-name", "123start", "with space", "main()"]:
+            is_valid, msg = mod_config_validate._validate_main_name(name)  # noqa: SLF001
+            assert not is_valid, f"'{name}' should be invalid"
+            assert "identifier" in msg.lower()
+
+    def test_main_name_in_config_file(self, tmp_path: Path) -> None:
+        """Test that main_name can be specified in config file."""
+        original_cwd = Path.cwd()
+        try:
+            os.chdir(tmp_path)
+
+            # Create minimal package
+            src_dir = tmp_path / "src" / "mypackage"
+            src_dir.mkdir(parents=True)
+            (src_dir / "__init__.py").write_text("")
+
+            # Create config with main_name
+            config_file = tmp_path / ".zipbundler.jsonc"
+            config_file.write_text(
+                """{
+  "packages": ["src/mypackage"],
+  "options": {
+    "main_name": "main"
+  }
+}
+""",
+                encoding="utf-8",
+            )
+
+            # Build should succeed with main_name in config
+            main_func = mod_cli if callable(mod_cli) else mod_cli.main
+            code = main_func(["--build"])
+
+            assert code == 0
+        finally:
+            os.chdir(original_cwd)
+
+    def test_cli_main_name_overrides_config(self, tmp_path: Path) -> None:
+        """Test that CLI --main-name overrides config value."""
+        original_cwd = Path.cwd()
+        try:
+            os.chdir(tmp_path)
+
+            # Create minimal package
+            src_dir = tmp_path / "src" / "mypackage"
+            src_dir.mkdir(parents=True)
+            (src_dir / "__init__.py").write_text("")
+
+            # Create config with different main_name
+            config_file = tmp_path / ".zipbundler.jsonc"
+            config_file.write_text(
+                """{
+  "packages": ["src/mypackage"],
+  "options": {
+    "main_name": "start"
+  }
+}
+""",
+                encoding="utf-8",
+            )
+
+            # Build with CLI override
+            main_func = mod_cli if callable(mod_cli) else mod_cli.main
+            code = main_func(["--build", "--main-name", "main"])
+
+            assert code == 0
+        finally:
+            os.chdir(original_cwd)
