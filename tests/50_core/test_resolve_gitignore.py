@@ -30,129 +30,37 @@ def test_resolve_gitignore_default_no_config() -> None:
     assert result == mod_constants.DEFAULT_RESPECT_GITIGNORE
 
 
-def test_resolve_gitignore_from_config_true() -> None:
-    """Test resolve_gitignore with config option set to True."""
+def test_resolve_gitignore_precedence_cli_over_config_over_default() -> None:
+    """Test complete precedence: CLI flag > config option > default."""
+    # Case 1: Config True, default ignored
     raw_config = mod_apathetic_utils.cast_hint(
         dict[str, object], {"options": {"respect_gitignore": True}}
     )
     args = argparse.Namespace(respect_gitignore=None)
+    assert mod_utils.resolve_gitignore(raw_config, args=args) is True
 
-    result = mod_utils.resolve_gitignore(raw_config, args=args)
-
-    assert result is True
-
-
-def test_resolve_gitignore_from_config_false() -> None:
-    """Test resolve_gitignore with config option set to False."""
+    # Case 2: Config False overrides default True
     raw_config = mod_apathetic_utils.cast_hint(
         dict[str, object], {"options": {"respect_gitignore": False}}
     )
     args = argparse.Namespace(respect_gitignore=None)
-
     result = mod_utils.resolve_gitignore(raw_config, args=args)
-
-    assert result is False
-
-
-def test_resolve_gitignore_cli_flag_true() -> None:
-    """Test resolve_gitignore with CLI flag --gitignore."""
-    raw_config = mod_apathetic_utils.cast_hint(
-        dict[str, object], {"options": {"respect_gitignore": False}}
-    )
-    args = argparse.Namespace(respect_gitignore=True)
-
-    result = mod_utils.resolve_gitignore(raw_config, args=args)
-
-    # CLI flag should override config
-    assert result is True
-
-
-def test_resolve_gitignore_cli_flag_false() -> None:
-    """Test resolve_gitignore with CLI flag --no-gitignore."""
-    raw_config = mod_apathetic_utils.cast_hint(
-        dict[str, object], {"options": {"respect_gitignore": True}}
-    )
-    args = argparse.Namespace(respect_gitignore=False)
-
-    result = mod_utils.resolve_gitignore(raw_config, args=args)
-
-    # CLI flag should override config
-    assert result is False
-
-
-def test_resolve_gitignore_cli_flag_overrides_config_true_to_false() -> None:
-    """Test CLI flag --no-gitignore overrides config True."""
-    raw_config = mod_apathetic_utils.cast_hint(
-        dict[str, object], {"options": {"respect_gitignore": True}}
-    )
-    args = argparse.Namespace(respect_gitignore=False)
-
-    result = mod_utils.resolve_gitignore(raw_config, args=args)
-
-    assert result is False
-
-
-def test_resolve_gitignore_cli_flag_overrides_config_false_to_true() -> None:
-    """Test CLI flag --gitignore overrides config False."""
-    raw_config = mod_apathetic_utils.cast_hint(
-        dict[str, object], {"options": {"respect_gitignore": False}}
-    )
-    args = argparse.Namespace(respect_gitignore=True)
-
-    result = mod_utils.resolve_gitignore(raw_config, args=args)
-
-    assert result is True
-
-
-def test_resolve_gitignore_config_overrides_default_true() -> None:
-    """Test config option True overrides default."""
-    raw_config = mod_apathetic_utils.cast_hint(
-        dict[str, object], {"options": {"respect_gitignore": True}}
-    )
-    args = argparse.Namespace(respect_gitignore=None)
-
-    result = mod_utils.resolve_gitignore(raw_config, args=args)
-
-    assert result is True
-
-
-def test_resolve_gitignore_config_overrides_default_false() -> None:
-    """Test config option False overrides default."""
-    raw_config = mod_apathetic_utils.cast_hint(
-        dict[str, object], {"options": {"respect_gitignore": False}}
-    )
-    args = argparse.Namespace(respect_gitignore=None)
-
-    result = mod_utils.resolve_gitignore(raw_config, args=args)
-
-    assert result is False
-
-
-def test_resolve_gitignore_precedence_cli_over_config() -> None:
-    """Test precedence: CLI flag > config option > default."""
-    raw_config = mod_apathetic_utils.cast_hint(
-        dict[str, object], {"options": {"respect_gitignore": False}}
-    )
-    # CLI flag True should take precedence over config False
-    args = argparse.Namespace(respect_gitignore=True)
-
-    result = mod_utils.resolve_gitignore(raw_config, args=args)
-
-    assert result is True
-
-
-def test_resolve_gitignore_precedence_config_over_default() -> None:
-    """Test precedence: config option > default."""
-    # Even though default is True, config False should win
-    raw_config = mod_apathetic_utils.cast_hint(
-        dict[str, object], {"options": {"respect_gitignore": False}}
-    )
-    args = argparse.Namespace(respect_gitignore=None)
-
-    result = mod_utils.resolve_gitignore(raw_config, args=args)
-
     assert result is False
     assert result != mod_constants.DEFAULT_RESPECT_GITIGNORE
+
+    # Case 3: CLI True overrides config False
+    raw_config = mod_apathetic_utils.cast_hint(
+        dict[str, object], {"options": {"respect_gitignore": False}}
+    )
+    args = argparse.Namespace(respect_gitignore=True)
+    assert mod_utils.resolve_gitignore(raw_config, args=args) is True
+
+    # Case 4: CLI False overrides config True
+    raw_config = mod_apathetic_utils.cast_hint(
+        dict[str, object], {"options": {"respect_gitignore": True}}
+    )
+    args = argparse.Namespace(respect_gitignore=False)
+    assert mod_utils.resolve_gitignore(raw_config, args=args) is False
 
 
 def test_resolve_gitignore_empty_config_uses_default() -> None:

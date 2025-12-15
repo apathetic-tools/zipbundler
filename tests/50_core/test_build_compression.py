@@ -36,55 +36,42 @@ def test_build_zipapp_with_compression(tmp_path: Path) -> None:
             assert info.compress_type == zipfile.ZIP_DEFLATED
 
 
-def test_build_zipapp_without_compression(tmp_path: Path) -> None:
-    """Test building a zipapp without compression (default behavior)."""
+def test_build_zipapp_no_compression(tmp_path: Path) -> None:
+    """Test building zipapp without compression (stored format, default behavior)."""
     # Create a test package
     pkg_dir = tmp_path / "mypackage"
     pkg_dir.mkdir()
     (pkg_dir / "__init__.py").write_text("")
     (pkg_dir / "module.py").write_text("def func():\n    pass\n")
 
-    output = tmp_path / "app.pyz"
+    output_explicit = tmp_path / "app_explicit.pyz"
+    output_default = tmp_path / "app_default.pyz"
 
+    # Test explicit stored compression
     mod_build.build_zipapp(
-        output=output,
+        output=output_explicit,
         packages=[pkg_dir],
         entry_point=None,
         compression="stored",
     )
 
-    # Verify zip file was created
-    assert output.exists()
-
-    # Verify compression is disabled (ZIP_STORED)
-    with zipfile.ZipFile(output, "r") as zf:
-        # Check that files are stored uncompressed
-        for info in zf.infolist():
-            assert info.compress_type == zipfile.ZIP_STORED
-
-
-def test_build_zipapp_default_no_compression(tmp_path: Path) -> None:
-    """Test that default behavior is no compression (matching zipapp)."""
-    # Create a test package
-    pkg_dir = tmp_path / "mypackage"
-    pkg_dir.mkdir()
-    (pkg_dir / "__init__.py").write_text("")
-    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
-
-    output = tmp_path / "app.pyz"
-
-    # Call without compress parameter (should default to False)
+    # Test default behavior (no compression parameter specified)
     mod_build.build_zipapp(
-        output=output,
+        output=output_default,
         packages=[pkg_dir],
         entry_point=None,
     )
 
-    # Verify zip file was created
-    assert output.exists()
+    # Verify both files were created
+    assert output_explicit.exists()
+    assert output_default.exists()
 
-    # Verify compression is disabled by default
-    with zipfile.ZipFile(output, "r") as zf:
+    # Verify compression is disabled in both cases (ZIP_STORED)
+    with zipfile.ZipFile(output_explicit, "r") as zf:
+        for info in zf.infolist():
+            assert info.compress_type == zipfile.ZIP_STORED
+
+    with zipfile.ZipFile(output_default, "r") as zf:
         for info in zf.infolist():
             assert info.compress_type == zipfile.ZIP_STORED
 
@@ -132,55 +119,43 @@ def test_build_zipapp_compression_affects_size(tmp_path: Path) -> None:
 
 
 def test_build_zipapp_with_compression_level(tmp_path: Path) -> None:
-    """Test building a zipapp with specific compression level."""
+    """Test building a zipapp with specific and default compression levels."""
     # Create a test package
     pkg_dir = tmp_path / "mypackage"
     pkg_dir.mkdir()
     (pkg_dir / "__init__.py").write_text("")
     (pkg_dir / "module.py").write_text("def func():\n    pass\n")
 
-    output = tmp_path / "app.pyz"
+    output_default = tmp_path / "app_default_level.pyz"
+    output_explicit = tmp_path / "app_level_9.pyz"
 
+    # Test with explicit compression level
     mod_build.build_zipapp(
-        output=output,
+        output=output_explicit,
         packages=[pkg_dir],
         entry_point=None,
         compression="deflate",
         compression_level=9,
     )
 
-    # Verify zip file was created
-    assert output.exists()
-
-    # Verify compression is enabled
-    with zipfile.ZipFile(output, "r") as zf:
-        for info in zf.infolist():
-            assert info.compress_type == zipfile.ZIP_DEFLATED
-
-
-def test_build_zipapp_compression_level_default(tmp_path: Path) -> None:
-    """Test that compression level defaults to 6 when not specified."""
-    # Create a test package
-    pkg_dir = tmp_path / "mypackage"
-    pkg_dir.mkdir()
-    (pkg_dir / "__init__.py").write_text("")
-    (pkg_dir / "module.py").write_text("def func():\n    pass\n")
-
-    output = tmp_path / "app.pyz"
-
-    # Call with compress=True but no compression_level (should default to 6)
+    # Test with default compression level (should default to 6)
     mod_build.build_zipapp(
-        output=output,
+        output=output_default,
         packages=[pkg_dir],
         entry_point=None,
         compression="deflate",
     )
 
-    # Verify zip file was created
-    assert output.exists()
+    # Verify both files were created
+    assert output_explicit.exists()
+    assert output_default.exists()
 
-    # Verify compression is enabled
-    with zipfile.ZipFile(output, "r") as zf:
+    # Verify compression is enabled in both cases
+    with zipfile.ZipFile(output_explicit, "r") as zf:
+        for info in zf.infolist():
+            assert info.compress_type == zipfile.ZIP_DEFLATED
+
+    with zipfile.ZipFile(output_default, "r") as zf:
         for info in zf.infolist():
             assert info.compress_type == zipfile.ZIP_DEFLATED
 

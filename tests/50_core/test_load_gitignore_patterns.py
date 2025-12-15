@@ -44,8 +44,10 @@ __pycache__/
     assert patterns[1] == "__pycache__/"
 
 
-def test_load_gitignore_patterns_with_blank_lines(tmp_path: Path) -> None:
-    """Test that blank lines in .gitignore are skipped."""
+def test_load_gitignore_patterns_with_blank_and_whitespace_lines(
+    tmp_path: Path,
+) -> None:
+    """Test that blank and whitespace-only lines in .gitignore are skipped."""
     gitignore = tmp_path / ".gitignore"
     gitignore.write_text(
         """*.pyc
@@ -53,6 +55,7 @@ def test_load_gitignore_patterns_with_blank_lines(tmp_path: Path) -> None:
 __pycache__/
 
 *.log
+\t
 """
     )
 
@@ -62,20 +65,6 @@ __pycache__/
     assert patterns[0] == "*.pyc"
     assert patterns[1] == "__pycache__/"
     assert patterns[2] == "*.log"
-
-
-def test_load_gitignore_patterns_with_whitespace_lines(
-    tmp_path: Path,
-) -> None:
-    """Test that whitespace-only lines in .gitignore are skipped."""
-    gitignore = tmp_path / ".gitignore"
-    gitignore.write_text("*.pyc\n   \n__pycache__/\n\t\n")
-
-    patterns = mod_utils.load_gitignore_patterns(gitignore)
-
-    assert len(patterns) == EXPECTED_PATTERNS_WITH_COMMENTS
-    assert patterns[0] == "*.pyc"
-    assert patterns[1] == "__pycache__/"
 
 
 def test_load_gitignore_patterns_missing_file(tmp_path: Path) -> None:
