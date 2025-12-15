@@ -2,7 +2,7 @@
 
 [project]
 name = "zipbundler"
-version = "0.7.0"
+version = "0.7.1"
 description = "Bundle your packages into a runnable, importable zip"
 authors = [
     { name = "Apathetic Tools" }

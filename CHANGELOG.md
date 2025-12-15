@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.7.1 (2025-12-15)
+
+### Bug Fixes
+
+- **test**: Resolve output filename conflict in test_output_default_extension
+  ([`5971a60`](https://github.com/apathetic-tools/zipbundler/commit/5971a601a065717aa8cf009d6453520e8d70ef6e))
+
+
 ## v0.7.0 (2025-12-15)
 
 ### Features
