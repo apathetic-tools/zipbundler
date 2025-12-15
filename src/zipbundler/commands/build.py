@@ -18,7 +18,12 @@ from zipbundler.config import (
     load_and_validate_config,
 )
 from zipbundler.logs import getAppLogger
-from zipbundler.utils import resolve_excludes, resolve_includes
+from zipbundler.utils import (
+    load_gitignore_patterns,
+    resolve_excludes,
+    resolve_gitignore,
+    resolve_includes,
+)
 
 
 def _resolve_installed_package(package_name: str) -> Path | None:
@@ -385,6 +390,24 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         excludes = resolve_excludes(
             raw_config, args=args, config_dir=config_dir, cwd=cwd
         )
+
+        # Load and merge .gitignore patterns if enabled
+        respect_gitignore = resolve_gitignore(raw_config, args=args)
+        if respect_gitignore:
+            gitignore_path = config_dir / ".gitignore"
+            patterns = load_gitignore_patterns(gitignore_path)
+            if patterns:
+                logger.trace(
+                    "[build_command] Adding %d .gitignore patterns to excludes",
+                    len(patterns),
+                )
+                for pattern in patterns:
+                    exc = {
+                        "path": pattern,
+                        "root": config_dir,
+                        "origin": "gitignore",
+                    }
+                    excludes.append(exc)  # type: ignore[arg-type]
 
         # Extract metadata
         metadata_config: MetadataConfig | None = config.get("metadata")

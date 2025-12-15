@@ -7,9 +7,12 @@ from pathlib import Path
 
 from zipbundler.actions import watch_for_changes
 from zipbundler.build import build_zipapp
-from zipbundler.constants import DEFAULT_WATCH_INTERVAL
+from zipbundler.constants import DEFAULT_RESPECT_GITIGNORE, DEFAULT_WATCH_INTERVAL
 from zipbundler.logs import getAppLogger
-from zipbundler.utils import resolve_excludes
+from zipbundler.utils import (
+    load_gitignore_patterns,
+    resolve_excludes,
+)
 
 
 def handle_watch_command(args: argparse.Namespace) -> int:
@@ -35,6 +38,29 @@ def handle_watch_command(args: argparse.Namespace) -> int:
         # Resolve excludes from CLI arguments (no config file in watch mode)
         # Watch only uses CLI excludes, so config=None and config_dir=cwd
         excludes = resolve_excludes(None, args=args, config_dir=cwd, cwd=cwd)
+
+        # Load and merge .gitignore patterns if enabled
+        # Check CLI flag first, then default to DEFAULT_RESPECT_GITIGNORE
+        cli_gitignore: object = getattr(args, "respect_gitignore", None)
+        if cli_gitignore is not None and isinstance(cli_gitignore, bool):
+            respect_gitignore = cli_gitignore
+        else:
+            respect_gitignore = DEFAULT_RESPECT_GITIGNORE
+        if respect_gitignore:
+            gitignore_path = cwd / ".gitignore"
+            patterns = load_gitignore_patterns(gitignore_path)
+            if patterns:
+                logger.trace(
+                    "[watch_command] Adding %d .gitignore patterns to excludes",
+                    len(patterns),
+                )
+                for pattern in patterns:
+                    exc = {
+                        "path": pattern,
+                        "root": cwd,
+                        "origin": "gitignore",
+                    }
+                    excludes.append(exc)  # type: ignore[arg-type]
 
         # Build rebuild function
         def rebuild() -> None:

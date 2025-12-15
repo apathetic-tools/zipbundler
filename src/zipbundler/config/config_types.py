@@ -14,7 +14,7 @@ from typing_extensions import NotRequired
 # --- Literal types for enums ---
 
 CompressionMethod = Literal["deflate", "stored", "bzip2", "lzma"]
-OriginType = Literal["cli", "config"]
+OriginType = Literal["cli", "config", "gitignore"]
 
 
 # --- Resolved path types ---
@@ -81,12 +81,14 @@ class OptionsConfig(TypedDict, total=False):
         main_guard: If True, wrap entry point in `if __name__ == "__main__":` guard
         compression: Compression method to use (default: "stored")
         compression_level: Compression level 0-9 (only valid with "deflate")
+        respect_gitignore: If True, respect .gitignore patterns (default: True)
     """
 
     shebang: bool | str
     main_guard: bool
     compression: CompressionMethod
     compression_level: int  # 0-9
+    respect_gitignore: bool
 
 
 class MetadataConfig(TypedDict, total=False):

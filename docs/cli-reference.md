@@ -68,10 +68,13 @@ zipbundler build [OPTIONS]
 - `-i, --include PATHS`: Override include paths from config. Format: `path` or `path:dest`
 - `--add-include PATHS`: Additional include paths to append to config includes (CLI only). Format: `path` or `path:dest`
 - `-e, --exclude PATTERNS`: Override exclude patterns from config
+- `--add-exclude PATTERNS`: Additional exclude patterns to append to config excludes (CLI only)
 - `-o, --output PATH`: Override output path from config
 - `-m, --main ENTRY_POINT`: Override entry point from config
 - `-p, --shebang PYTHON`: Override shebang from config
 - `--no-shebang`: Disable shebang insertion
+- `--gitignore`: Respect `.gitignore` patterns when selecting files (default)
+- `--no-gitignore`: Ignore `.gitignore` and include all files
 - `-c, --compress`: Compress files with deflate method
 - `--no-compress`: Disable compression
 - `--compression-level LEVEL`: Compression level 0-9 (only with --compress)
@@ -118,6 +121,12 @@ zipbundler build --compress --compression-level 9
 
 # Force rebuild
 zipbundler build --force
+
+# Ignore .gitignore patterns (include all files)
+zipbundler build --no-gitignore
+
+# Respect .gitignore (default behavior)
+zipbundler build --gitignore
 ```
 
 ### `zipbundler init`

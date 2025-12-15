@@ -102,7 +102,8 @@ Various bundling options.
     "shebang": "/usr/bin/env python3",  // Shebang line (default: "/usr/bin/env python3", set to false to disable)
     "main_guard": true,                  // Insert if __name__ == "__main__" guard (default: true)
     "compression": "deflate",            // Compression method: "deflate", "stored", "bzip2", "lzma" (default: "deflate")
-    "compression_level": 6               // Compression level 0-9 (default: 6, only for deflate)
+    "compression_level": 6,              // Compression level 0-9 (default: 6, only for deflate)
+    "respect_gitignore": true            // Respect .gitignore patterns (default: true)
   }
 }
 ```
@@ -111,6 +112,7 @@ Various bundling options.
 - `main_guard`: If `true`, wraps entry point in `if __name__ == "__main__":` guard
 - `compression`: Zip compression method (see Python's `zipfile` module). Use `"stored"` for no compression (equivalent to `--no-compress` in zipapp-style CLI).
 - `compression_level`: Compression level for deflate method (0-9, higher = more compression)
+- `respect_gitignore`: If `true`, respect `.gitignore` patterns when selecting files (default: `true`). Can be overridden with CLI flags `--gitignore` or `--no-gitignore`.
 
 #### `metadata` (optional)
 Metadata included in the zip file.
@@ -145,6 +147,7 @@ path = "dist/my_package.zip"
 shebang = true
 main_guard = true
 compression = "deflate"
+respect_gitignore = true
 
 [tool.zipbundler.metadata]
 display_name = "My Package"
@@ -185,7 +188,8 @@ version = "1.0.0"
     "shebang": true,
     "main_guard": true,
     "compression": "deflate",
-    "compression_level": 9
+    "compression_level": 9,
+    "respect_gitignore": true
   },
   "metadata": {
     "display_name": "My Package",

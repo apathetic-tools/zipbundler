@@ -19,8 +19,7 @@ The following CLI arguments are defined in `cli.py` but not yet used in command 
 - **`--input`** / `--in` / `input`: Override the name of the input file or directory. Start from an existing build (usually optional).
 
 #### Build Options
-- **`--gitignore`** / `--no-gitignore`** / `respect_gitignore`: Respect .gitignore when selecting files (default: True). Currently defined but not passed to build functions.
-- **`--disable-build-timestamp`** / `disable_build_timestamp`: Disable build timestamps for deterministic builds (uses placeholder). Currently defined but not used.
+ **`--disable-build-timestamp`** / `disable_build_timestamp`: Disable build timestamps for deterministic builds (uses placeholder). Currently defined but not used.
 - **`--no-main`**: Disable main insertion. Currently defined but not fully implemented - command handlers check `if args.entry_point:` but don't handle `entry_point=False` case.
 - **`--no-compress`**: Do not compress the zip file (overrides config). ✅ Implemented (handles `compress=False`).
 
