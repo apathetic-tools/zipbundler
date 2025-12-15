@@ -118,7 +118,7 @@ def _resolve_config_includes(
 
     for raw in include_list:
         if isinstance(raw, dict):
-            # Object format: {"path": "...", "dest": "..."}
+            # Object format: {"path": "...", "dest": "...", "type": "..."}
             raw_dict: dict[str, object] = cast_hint(dict[str, object], raw)
             path_obj = raw_dict.get("path", "")
             if not isinstance(path_obj, str):
@@ -129,11 +129,24 @@ def _resolve_config_includes(
             if isinstance(dest_obj, str):
                 dest_str = dest_obj
 
+            # Extract type field (defaults to "file")
+            type_obj = raw_dict.get("type")
+            type_str: str | None = None
+            if isinstance(type_obj, str):
+                if type_obj not in ("file", "zip"):
+                    logger = getAppLogger()
+                    logger.warning("Invalid include type: %s, using 'file'", type_obj)
+                    type_str = "file"
+                else:
+                    type_str = type_obj
+
             inc = make_include_resolved(
                 path_str, config_dir, "config", pattern=path_str
             )
             if dest_str:
                 inc["dest"] = Path(dest_str)
+            if type_str:  # pyright: ignore[reportTypedDictNotRequiredAccess]
+                inc["type"] = type_str  # type: ignore[typeddict-item]
             includes.append(inc)
         elif isinstance(raw, str):
             # String format: "path/to/files" or "path:dest"
@@ -179,7 +192,8 @@ def resolve_includes(
     Handles the following precedence:
     1. If --include is provided (full override): use cwd as root, ignore config
     2. If config has includes: use config_dir as root for each include
-    3. If --add-include is provided: append to config includes, use cwd as root
+    3. If --add-zip is provided: append zip includes, use cwd as root
+    4. If --add-include is provided: append to config includes, use cwd as root
 
     Args:
         raw_config: Raw configuration dict from config file (may be None)
@@ -214,7 +228,22 @@ def resolve_includes(
             )
             includes.extend(_resolve_config_includes(cfg_list, config_dir))
 
-    # Case 3: --add-include (extend, not override)
+    # Case 3: --add-zip (extend with zip type, not override)
+    add_zip_arg: object = getattr(args, "add_zip", None)
+    if add_zip_arg and isinstance(add_zip_arg, list):
+        cli_list_zip = cast_hint(list[object], add_zip_arg)
+        logger.trace(
+            "[resolve_includes] Adding --add-zip items (%d items)",
+            len(cli_list_zip),
+        )
+        # Create includes with type="zip", support PATH or PATH:dest syntax
+        for raw in cli_list_zip:
+            if isinstance(raw, str):
+                inc, _ = parse_include_with_dest(raw, cwd)
+                inc["type"] = "zip"
+                includes.append(inc)
+
+    # Case 4: --add-include (extend, not override)
     add_include_arg: object = getattr(args, "add_include", None)
     if add_include_arg and isinstance(add_include_arg, list):
         cli_list_add = cast_hint(list[object], add_include_arg)

@@ -323,8 +323,9 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             raw_config, args=args, config_dir=config_dir, cwd=cwd
         )
 
-        # Separate includes into packages and additional files
+        # Separate includes into packages, additional files, and zips
         additional_includes: list[tuple[Path, Path | None]] = []
+        zip_includes: list[tuple[Path, Path | None]] = []
         for inc in resolved_includes:
             full_path = inc["path"]
             if isinstance(full_path, Path):
@@ -334,6 +335,24 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                 full_path_resolved = (inc["root"] / full_path).resolve()
 
             dest = inc.get("dest")
+            include_type = inc.get("type", "file")
+
+            # Handle zip includes
+            if include_type == "zip":
+                if full_path_resolved.is_file():
+                    zip_includes.append((full_path_resolved, dest))
+                    logger.debug(
+                        "Added zip include (origin: %s): %s -> %s",
+                        inc["origin"],
+                        full_path_resolved,
+                        dest or "root",
+                    )
+                else:
+                    logger.warning(
+                        "Zip include path does not exist: %s",
+                        full_path_resolved,
+                    )
+                continue
 
             # Try to resolve as a package pattern first
             # (handles cases like 'extra/pkg2' or glob patterns)
@@ -500,6 +519,52 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         # CLI args override config
         if hasattr(args, "output") and args.output:
             output = Path(args.output).resolve()
+
+        # Handle input archive (CLI only, not in config)
+        input_archive: Path | None = None
+        preserve_input_files = True  # Default: preserve files from input archive
+        if hasattr(args, "input") and args.input:
+            input_path = Path(args.input).resolve()
+
+            # Check if it's a directory - if so, resolve the zip file name
+            # using the output file name
+            if input_path.is_dir():
+                # Get the base name from the output path
+                # e.g., if output is "dist/myapp.pyz", use "myapp.pyz"
+                output_name = output.name
+                input_archive = (input_path / output_name).resolve()
+                logger.debug("Input is a directory, resolved to: %s", input_archive)
+            else:
+                input_archive = input_path
+                logger.debug("Input archive: %s", input_archive)
+
+            # Validate that the input exists and is a valid zip file
+            if not input_archive.exists():
+                logger.error("Input archive not found: %s", input_archive)
+                return 1
+
+            if not input_archive.is_file():
+                logger.error("Input archive is not a file: %s", input_archive)
+                return 1
+
+            # Determine if files should be preserved from input archive based
+            # on input_mode:
+            # - APPEND mode (default): preserve existing files, merge with new
+            # - REPLACE mode: wipe existing files, use only new packages
+            input_mode = getattr(args, "input_mode", "append")
+            if input_mode == "replace":
+                preserve_input_files = False
+                logger.debug(
+                    "--replace mode specified with --input: "
+                    "will replace all files from input archive"
+                )
+            else:
+                preserve_input_files = True
+                logger.debug(
+                    "--append mode (default) with --input: "
+                    "will merge with existing files from input archive"
+                )
+
         if hasattr(args, "entry_point"):
             # Handle entry_point: None (not specified), False (--no-main),
             # or string value (from --main)
@@ -556,7 +621,10 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             metadata=metadata,
             force=getattr(args, "force", False),
             additional_includes=additional_includes if additional_includes else None,
+            zip_includes=zip_includes if zip_includes else None,
             disable_build_timestamp=disable_build_timestamp,
+            input_archive=input_archive,
+            preserve_input_files=preserve_input_files,
         )
     except (FileNotFoundError, ValueError, TypeError) as e:
         logger.errorIfNotDebug(str(e))

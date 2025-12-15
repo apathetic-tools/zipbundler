@@ -11,12 +11,10 @@ Some of these we just want to consider, and may not want to implement.
 
 ## 🧰 CLI Commands
 
-### CLI Arguments (Defined but Not Yet Implemented)
-
-The following CLI arguments are defined in `cli.py` but not yet used in command handlers:
+### CLI Arguments (Implemented)
 
 #### Build Flags
-- **`--input`** / `--in` / `input`: Override the name of the input file or directory. Start from an existing build (usually optional).
+- **`--input`** / `--in`: Override the name of the input file or directory. Start from an existing build (usually optional). ✅ Implemented
 
 #### Universal Flags
 - **`--compat`** / `--compatability`** / `compat`: Compatibility mode with stdlib zipapp behaviour. Currently defined but not implemented.

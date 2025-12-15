@@ -15,6 +15,7 @@ from typing_extensions import NotRequired
 
 CompressionMethod = Literal["deflate", "stored", "bzip2", "lzma"]
 OriginType = Literal["cli", "config", "gitignore"]
+IncludeType = Literal["file", "zip"]
 
 
 # --- Resolved path types ---
@@ -40,15 +41,17 @@ class PathResolved(TypedDict):
 
 
 class IncludeResolved(PathResolved):
-    """Resolved include with optional custom destination.
+    """Resolved include with optional custom destination and type.
 
-    Extends PathResolved with an optional dest field to specify where
-    the included file/directory should be placed in the output zip.
+    Extends PathResolved with optional dest and type fields to specify where
+    the included file should be placed and what type of include it is.
 
     Fields:
+        type: Type of include: "file" (default) or "zip"
         dest: Optional override for target name/path in the zip file
     """
 
+    type: NotRequired[IncludeType]
     dest: NotRequired[Path]
 
 
@@ -151,14 +154,19 @@ class MetadataConfig(TypedDict, total=False):
 
 
 class IncludeConfig(TypedDict):
-    """Include configuration with optional destination.
+    """Include configuration with optional destination and type.
 
     Fields:
-        path: Path, glob pattern, or file name to include
-        dest: Optional destination in the output zip
+        path: Path, glob pattern, file name, or zip file to include
+        type: Type of include: "file" (default) or "zip". When "zip", the
+            contents of the zip file are merged into the output. When "file",
+            the file or directory is included as-is (can add the zip itself).
+        dest: Optional destination in the output zip (applies to files only,
+            not zip contents)
     """
 
     path: str
+    type: NotRequired[IncludeType]
     dest: NotRequired[str]
 
 

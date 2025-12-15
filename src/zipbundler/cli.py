@@ -218,6 +218,21 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         ),
     )
 
+    # add-zip
+    build_flags.add_argument(
+        "--add-zip",
+        action="extend",
+        nargs="+",
+        metavar="PATH",
+        dest="add_zip",
+        help=(
+            "Add zip file contents to the output (CLI only, highest priority). "
+            "Format: path or path:dest. Merges the zip's contents into the "
+            "output, with optional destination remapping. "
+            "Relative to current working directory."
+        ),
+    )
+
     # excludes
     build_flags.add_argument(
         "-e",
@@ -274,6 +289,32 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
         dest="input",  # note: args.in is reserved
         help=argparse.SUPPRESS,
     )
+
+    # input mode (append vs replace)
+    input_mode = build_flags.add_mutually_exclusive_group()
+    input_mode.add_argument(
+        "-a",
+        "--append",
+        dest="input_mode",
+        action="store_const",
+        const="append",
+        help=(
+            "Append to input archive (default). Merge config packages "
+            "with existing files."
+        ),
+    )
+    input_mode.add_argument(
+        "-r",
+        "--replace",
+        dest="input_mode",
+        action="store_const",
+        const="replace",
+        help=(
+            "Replace input archive contents. Use config packages as new base, "
+            "discard old."
+        ),
+    )
+    input_mode.set_defaults(input_mode="append")
 
     # config
     build_flags.add_argument("--config", help="Path to build config file.")
@@ -500,6 +541,8 @@ def _prepare_build_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
     build_args = argparse.Namespace()
     build_args.config = parsed_args.config
     build_args.output = parsed_args.output
+    build_args.input = parsed_args.input
+    build_args.input_mode = getattr(parsed_args, "input_mode", "append")
     build_args.entry_point = parsed_args.entry_point
     build_args.shebang = parsed_args.shebang
     # Handle --compress, --no-compress, and compression_level
@@ -515,6 +558,7 @@ def _prepare_build_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
     build_args.compression_level = getattr(parsed_args, "compress_level", None)
     build_args.include = getattr(parsed_args, "include", None)
     build_args.add_include = getattr(parsed_args, "add_include", None)
+    build_args.add_zip = getattr(parsed_args, "add_zip", None)
     build_args.exclude = getattr(parsed_args, "exclude", None)
     build_args.add_exclude = getattr(parsed_args, "add_exclude", None)
     build_args.respect_gitignore = getattr(parsed_args, "respect_gitignore", None)

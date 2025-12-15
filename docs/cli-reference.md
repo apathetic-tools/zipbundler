@@ -70,6 +70,7 @@ zipbundler build [OPTIONS]
 - `-e, --exclude PATTERNS`: Override exclude patterns from config
 - `--add-exclude PATTERNS`: Additional exclude patterns to append to config excludes (CLI only)
 - `-o, --output PATH`: Override output path from config
+- `--input PATH`, `--in PATH`: Use an existing zipapp as the starting point. Can be a file path or directory. When a directory is given, zipbundler resolves the zip file name using the output filename
 - `-m, --main ENTRY_POINT`: Override entry point from config
 - `-p, --shebang PYTHON`: Override shebang from config
 - `--no-shebang`: Disable shebang insertion
@@ -129,6 +130,15 @@ zipbundler build --no-gitignore
 
 # Respect .gitignore (default behavior)
 zipbundler build --gitignore
+
+# Append new packages to an existing zipapp
+zipbundler build --input dist/app.pyz --force
+
+# Update packages in an existing zipapp using a directory path
+zipbundler build --input dist --force
+
+# Append additional files to existing zipapp
+zipbundler build --input existing.pyz --add-include new_module.py --force
 ```
 
 ### `zipbundler init`
@@ -284,5 +294,35 @@ zipbundler build --disable-build-timestamp
 
 # Build with deterministic timestamps via environment variable
 DISABLE_BUILD_TIMESTAMP=true zipbundler build
+
+# Update existing zipapp with new packages
+zipbundler build --input dist/app.pyz --force
+
+# Incremental builds: append new modules to existing zipapp
+zipbundler build --input existing.pyz --add-include src/new_module.py --force
 ```
+
+### Incremental Builds with `--input`
+
+The `--input` flag allows you to start from an existing zipapp and update it with new or modified packages:
+
+```bash
+# Initial build
+zipbundler build -o dist/app.pyz
+
+# Add new packages to the existing zipapp
+zipbundler build --input dist/app.pyz --force
+
+# The new build will:
+# - Preserve all files from the input archive that aren't being updated
+# - Update any packages specified in the current build
+# - Replace PKG-INFO and __main__.py if new metadata or entry point is provided
+# - Preserve other metadata files (if any)
+```
+
+**Use Cases:**
+- **Incremental development**: Add new modules without rebuilding everything
+- **Staged builds**: Build base packages once, then add features incrementally
+- **Configuration updates**: Update package metadata while preserving application code
+- **Patching**: Apply updates to specific packages in a production build
 

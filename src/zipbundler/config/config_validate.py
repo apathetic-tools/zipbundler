@@ -135,7 +135,7 @@ def _set_valid_and_return(
     return summary
 
 
-def _validate_custom_rules(  # noqa: PLR0912
+def _validate_custom_rules(  # noqa: C901, PLR0912
     parsed_cfg: dict[str, Any],
     *,
     cwd: Path,
@@ -225,6 +225,21 @@ def _validate_custom_rules(  # noqa: PLR0912
                 summary=summary,
                 is_error=False,
             )
+
+    # --- Validate include types ---
+    include = parsed_cfg.get("include")
+    if isinstance(include, list):  # pyright: ignore[reportUnknownArgumentType]
+        for idx, item in enumerate(include):  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+            if isinstance(item, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+                item_type = item.get("type")  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+                if isinstance(item_type, str) and item_type not in ("file", "zip"):
+                    collect_msg(
+                        f"Invalid include type at index {idx}: '{item_type}'. "
+                        "Valid options: 'file', 'zip'",
+                        strict=strict_config,
+                        summary=summary,
+                        is_error=False,
+                    )
 
     # --- Validate empty packages warning ---
     packages = parsed_cfg.get("packages")

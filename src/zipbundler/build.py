@@ -8,6 +8,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pathspec as ps
 from apathetic_utils import is_excluded_raw
 
 from .config.config_types import PathResolved
@@ -182,6 +183,36 @@ def _needs_rebuild(
     return False
 
 
+def _should_exclude_file(path: str, excludes: list[dict[str, object]]) -> bool:
+    """Check if a file path matches any exclude pattern.
+
+    Args:
+        path: File path to check (as archive name, using forward slashes)
+        excludes: List of exclude pattern objects (PathResolved)
+
+    Returns:
+        True if the path matches any exclude pattern, False otherwise
+    """
+    if not excludes:
+        return False
+
+    for exc in excludes:
+        pattern = exc.get("path", "")
+        if not isinstance(pattern, str):
+            continue
+
+        # Create a PathSpec from the pattern and check the path
+        try:
+            spec = ps.PathSpec.from_lines("gitwildmatch", [pattern])
+            if spec.match_file(path):
+                return True
+        except ValueError:
+            # If pattern is invalid, skip it and continue checking other patterns
+            pass
+
+    return False
+
+
 def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     output: Path,
     packages: list[Path],
@@ -196,7 +227,10 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     metadata: dict[str, str] | None = None,
     force: bool = False,
     additional_includes: list[tuple[Path, Path | None]] | None = None,
+    zip_includes: list[tuple[Path, Path | None]] | None = None,
     disable_build_timestamp: bool = False,
+    input_archive: Path | str | None = None,
+    preserve_input_files: bool = True,
 ) -> None:
     """Build a zipapp-compatible zip file.
 
@@ -225,8 +259,18 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
         additional_includes: Optional list of (file_path, destination) tuples
             for individual files to include in the zip. If destination is None,
             uses the file's basename. Useful for including data files or configs.
+        zip_includes: Optional list of (zip_path, destination) tuples. Each zip
+            file's contents are extracted and merged into the output. If destination
+            is provided, remaps the zip's root directory to that destination path.
+            Exclude patterns are applied to zip contents.
         disable_build_timestamp: If True, use placeholder instead of real
             timestamp in PKG-INFO for deterministic builds. Defaults to False.
+        input_archive: Optional path to an existing zipapp archive to use as the
+            starting point. See preserve_input_files for merge behavior.
+        preserve_input_files: If True (default, APPEND mode), preserve files from
+            input archive and merge with new packages. If False (REPLACE mode), wipe
+            all existing files from input archive and use only new packages. Only
+            applies when input_archive is set.
 
     Raises:
         ValueError: If output path is invalid or packages are empty
@@ -252,9 +296,15 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     logger.debug("Dry run: %s", dry_run)
     if excludes:
         logger.debug("Exclude patterns: %s", [e["path"] for e in excludes])
+    if input_archive:
+        logger.debug("Input archive: %s", input_archive)
 
     # Collect files that would be included
     files_to_include: list[tuple[Path, Path]] = []
+
+    # Track which files are being added from the new build
+    # (for updating/overwriting in the input archive)
+    new_files_by_arcname: dict[str, tuple[Path, Path]] = {}
 
     # Add all Python files from packages
     for pkg in packages:
@@ -279,13 +329,15 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
 
         for f in pkg_path.rglob("*.py"):
             # Calculate relative path from archive root (for archive names only)
-            arcname = f.relative_to(archive_root)
+            arcname_path = f.relative_to(archive_root)
+            arcname_str = str(arcname_path)
             # Check if file matches exclude patterns (each pattern has its own root)
             if _matches_exclude_pattern(f, excludes):
                 logger.trace("Excluded file: %s (matched pattern)", f)
                 continue
-            files_to_include.append((f, arcname))
-            logger.trace("Added file: %s -> %s", f, arcname)
+            files_to_include.append((f, arcname_path))
+            new_files_by_arcname[arcname_str] = (f, arcname_path)
+            logger.trace("Added file: %s -> %s", f, arcname_str)
 
     # Add additional individual files (from --add-include)
     if additional_includes:
@@ -294,12 +346,88 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 logger.warning("Additional include file does not exist: %s", file_path)
                 continue
             # Use provided destination or file's basename
-            arcname = Path(dest) if dest else Path(file_path.name)
-            files_to_include.append((file_path, arcname))
-            logger.trace("Added additional file: %s -> %s", file_path, arcname)
+            arcname_path = Path(dest) if dest else Path(file_path.name)
+            arcname_str = str(arcname_path)
+            files_to_include.append((file_path, arcname_path))
+            new_files_by_arcname[arcname_str] = (file_path, arcname_path)
+            logger.trace("Added additional file: %s -> %s", file_path, arcname_str)
+
+    # Track files from zip includes
+    zip_files_to_include: dict[str, bytes] = {}
+
+    if zip_includes:
+        logger.debug("Processing %d zip includes", len(zip_includes))
+
+        for zip_path, dest in zip_includes:
+            if not zip_path.exists():
+                msg = f"Zip include not found: {zip_path}"
+                raise FileNotFoundError(msg)
+
+            if not zip_path.is_file():
+                msg = f"Zip include is not a file: {zip_path}"
+                raise ValueError(msg)
+
+            logger.debug("Extracting zip: %s", zip_path)
+
+            # Read zip file (handle shebang if present)
+            try:
+                with zip_path.open("rb") as file_handle:
+                    first_two = file_handle.read(2)
+                    if first_two == b"#!":
+                        file_handle.readline()
+                    else:
+                        file_handle.seek(0)
+                    zip_data = file_handle.read()
+
+                # Extract files from zip
+                temp_zip = io.BytesIO(zip_data)
+                with zipfile.ZipFile(temp_zip, "r") as zf:
+                    for name in zf.namelist():
+                        # Skip PKG-INFO if we're generating new metadata
+                        if name == "PKG-INFO" and metadata:
+                            logger.trace(
+                                "Skipping PKG-INFO from zip %s (generating new)",
+                                zip_path.name,
+                            )
+                            continue
+
+                        # Skip __main__.py if we're generating new entry point
+                        if name == "__main__.py" and entry_point is not None:
+                            logger.trace(
+                                "Skipping __main__.py from zip %s (generating new)",
+                                zip_path.name,
+                            )
+                            continue
+
+                        # Apply dest remapping if provided
+                        zip_arcname: str = str(Path(dest) / name) if dest else name
+
+                        # Apply exclude patterns
+                        excludes_list: list[dict[str, object]] = [
+                            {"path": e.get("path", "")} for e in (excludes or [])
+                        ]
+                        should_exclude = excludes_list and _should_exclude_file(
+                            zip_arcname, excludes_list
+                        )
+                        if should_exclude:
+                            logger.trace(
+                                "Excluded from zip %s: %s", zip_path.name, name
+                            )
+                            continue
+
+                        # Read file content
+                        zip_files_to_include[zip_arcname] = zf.read(name)
+                        logger.trace(
+                            "Added from zip %s: %s", zip_path.name, zip_arcname
+                        )
+
+            except zipfile.BadZipFile as e:
+                msg = f"Invalid zip file in include: {zip_path}"
+                raise ValueError(msg) from e
 
     # Count entry point in file count if provided
-    file_count = len(files_to_include) + (1 if entry_point is not None else 0)
+    entry_point_count = 1 if entry_point is not None else 0
+    file_count = len(files_to_include) + len(zip_files_to_include) + entry_point_count
 
     # Incremental build check: skip if output is up-to-date
     if (
@@ -341,6 +469,73 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
         compression_level if compression_const == zipfile.ZIP_DEFLATED else None
     )
 
+    # If input archive is provided, read it first and preserve existing files
+    existing_files: dict[str, bytes] = {}
+    if input_archive:
+        input_path = Path(input_archive).resolve()
+        if not input_path.exists():
+            msg = f"Input archive not found: {input_path}"
+            raise FileNotFoundError(msg)
+        if not input_path.is_file():
+            msg = f"Input archive is not a file: {input_path}"
+            raise ValueError(msg)
+
+        # Read existing zip file content (skipping shebang if present)
+        try:
+            with input_path.open("rb") as file_handle:
+                # Check for shebang (first 2 bytes are #!)
+                first_two = file_handle.read(2)
+                if first_two == b"#!":
+                    # Skip shebang line
+                    file_handle.readline()
+                else:
+                    # No shebang, rewind to start
+                    file_handle.seek(0)
+
+                # Read remaining data (the zip file)
+                zip_data = file_handle.read()
+
+            # Extract files from the existing archive
+            temp_zip = io.BytesIO(zip_data)
+            with zipfile.ZipFile(temp_zip, "r") as input_zf:
+                for name in input_zf.namelist():
+                    # Skip PKG-INFO if we're generating new metadata
+                    if name == "PKG-INFO" and metadata:
+                        logger.trace(
+                            "Skipping PKG-INFO from input archive (will generate new)"
+                        )
+                        continue
+                    # Skip __main__.py if we're generating a new entry point
+                    if name == "__main__.py" and entry_point is not None:
+                        logger.trace(
+                            "Skipping __main__.py from input archive (will "
+                            "generate new)"
+                        )
+                        continue
+                    # Skip files if preserve_input_files is False (--replace mode)
+                    if not preserve_input_files:
+                        logger.trace(
+                            "Skipping file from input archive (--replace mode "
+                            "wipes): %s",
+                            name,
+                        )
+                        continue
+                    # Store all other files except those being overwritten by new build
+                    if name not in new_files_by_arcname:
+                        existing_files[name] = input_zf.read(name)
+                        logger.trace(
+                            "Preserving existing file from input archive: %s", name
+                        )
+                    else:
+                        logger.trace(
+                            "Will overwrite existing file from input archive: %s", name
+                        )
+
+            logger.info("Loaded input archive: %s", input_path)
+        except zipfile.BadZipFile as e:
+            msg = f"Invalid zip file in input archive: {input_path}"
+            raise ValueError(msg) from e
+
     with zipfile.ZipFile(
         output, "w", compression=compression_const, compresslevel=compresslevel
     ) as zf:
@@ -372,9 +567,19 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
                 "Wrote __main__.py with entry point (main_guard=%s)", main_guard
             )
 
-        # Add all Python files from packages
-        for file_path, arcname in files_to_include:
-            zf.write(file_path, arcname)
+        # Write all new Python files from packages
+        for file_path, file_arcname in files_to_include:
+            zf.write(file_path, str(file_arcname))
+
+        # Write files from zip includes
+        for zip_file_arcname, content in zip_files_to_include.items():
+            zf.writestr(str(zip_file_arcname), content)
+            logger.trace("Wrote zip include file: %s", zip_file_arcname)
+
+        # Write preserved files from input archive
+        for preserved_arcname, content in existing_files.items():
+            zf.writestr(preserved_arcname, content)
+            logger.trace("Wrote preserved file to output: %s", preserved_arcname)
 
     # Prepend shebang if provided
     if shebang:
