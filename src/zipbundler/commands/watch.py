@@ -65,10 +65,20 @@ def handle_watch_command(args: argparse.Namespace) -> int:
         # Build rebuild function
         def rebuild() -> None:
             compression = "deflate" if getattr(args, "compress", False) else "stored"
+            # Handle entry_point: None (not specified), False (--no-main),
+            # or string value (from --main)
+            entry_point_code: str | None = None
+            entry_point_str = getattr(args, "entry_point", None)
+            if entry_point_str is False:
+                # --no-main explicitly disables entry point
+                entry_point_code = None
+            elif entry_point_str:
+                # --main was specified with a value
+                entry_point_code = entry_point_str
             build_zipapp(
                 output=output,
                 packages=packages,
-                entry_point=args.entry_point,
+                entry_point=entry_point_code,
                 shebang=args.shebang or "#!/usr/bin/env python3",
                 compression=compression,
                 exclude=excludes,

@@ -78,6 +78,7 @@ class OptionsConfig(TypedDict, total=False):
             - True: Use default shebang
             - False: No shebang
             - str: Custom shebang path (with or without #!)
+        insert_main: If True, create __main__.py with entry point (default: True)
         main_guard: If True, wrap entry point in `if __name__ == "__main__":` guard
         compress: If True, compress the zip file (default: True)
         compression: Compression method to use (default: "stored")
@@ -86,6 +87,7 @@ class OptionsConfig(TypedDict, total=False):
     """
 
     shebang: bool | str
+    insert_main: bool
     main_guard: bool
     compress: bool
     compression: CompressionMethod
@@ -100,6 +102,7 @@ class OptionsConfigResolved(TypedDict):
 
     Fields:
         shebang: Resolved shebang (str path, or None if disabled)
+        insert_main: Whether to create __main__.py with entry point
         main_guard: Whether to wrap entry point in __main__ guard
         compress: Whether to compress the zip file
         compression: Compression method to use
@@ -110,6 +113,7 @@ class OptionsConfigResolved(TypedDict):
     """
 
     shebang: str | None  # None if --no-shebang, else string path
+    insert_main: bool
     main_guard: bool
     compress: bool
     compression: CompressionMethod

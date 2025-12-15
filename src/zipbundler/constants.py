@@ -19,6 +19,7 @@ DEFAULT_LOG_LEVEL: str = "info"
 DEFAULT_WATCH_INTERVAL: float = 1.0  # seconds
 DEFAULT_RESPECT_GITIGNORE: bool = True
 DEFAULT_COMPRESS: bool = True
+DEFAULT_INSERT_MAIN: bool = True
 
 # --- config defaults ---
 DEFAULT_STRICT_CONFIG: bool = True

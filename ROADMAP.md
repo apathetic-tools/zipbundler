@@ -18,9 +18,6 @@ The following CLI arguments are defined in `cli.py` but not yet used in command 
 #### Build Flags
 - **`--input`** / `--in` / `input`: Override the name of the input file or directory. Start from an existing build (usually optional).
 
-#### Build Options
-- **`--no-main`**: Disable main insertion. Currently defined but not fully implemented - command handlers check `if args.entry_point:` but don't handle `entry_point=False` case.
-
 #### Universal Flags
 - **`--compat`** / `--compatability`** / `compat`: Compatibility mode with stdlib zipapp behaviour. Currently defined but not implemented.
 

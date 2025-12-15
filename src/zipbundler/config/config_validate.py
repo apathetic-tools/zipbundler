@@ -38,6 +38,7 @@ FIELD_EXAMPLES: dict[str, str] = {
     "root.output.directory": '"dist"',
     "root.output.name": '"bundle"',
     "root.options.shebang": 'true or "/usr/bin/env python3"',
+    "root.options.insert_main": "true",
     "root.options.main_guard": "true",
     "root.options.compression": '"deflate"',
     "root.options.compression_level": "9",

@@ -500,8 +500,15 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         # CLI args override config
         if hasattr(args, "output") and args.output:
             output = Path(args.output).resolve()
-        if hasattr(args, "entry_point") and args.entry_point:
-            entry_point_code = extract_entry_point_code(args.entry_point)
+        if hasattr(args, "entry_point"):
+            # Handle entry_point: None (not specified), False (--no-main),
+            # or string value (from --main)
+            if args.entry_point is False:
+                # --no-main explicitly disables entry point
+                entry_point_code = None
+            elif args.entry_point:
+                # --main was specified with a value
+                entry_point_code = extract_entry_point_code(args.entry_point)
         if hasattr(args, "shebang"):
             # Handle --no-shebang (False) or --python/-p (string)
             if args.shebang is False:

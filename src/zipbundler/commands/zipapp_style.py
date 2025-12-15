@@ -137,7 +137,13 @@ def handle_zipapp_style_command(args: argparse.Namespace) -> int:  # noqa: C901,
     # Extract entry point
     entry_point_str = getattr(args, "entry_point", None)
     entry_point_code: str | None = None
-    if entry_point_str:
+    # Handle entry_point: None (not specified), False (--no-main),
+    # or string value (from --main)
+    if entry_point_str is False:
+        # --no-main explicitly disables entry point
+        entry_point_code = None
+    elif entry_point_str:
+        # --main was specified with a value
         entry_point_code = extract_entry_point_code(entry_point_str)
 
     # Extract shebang
