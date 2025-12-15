@@ -528,10 +528,6 @@ def _prepare_init_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
     # Use --config to specify where to create the config file
     init_args.config = getattr(parsed_args, "config", None)
     init_args.force = getattr(parsed_args, "force", False)
-    # Verify this arg exists
-    init_args.preset = getattr(parsed_args, "preset", None)
-    # Verify this arg exists
-    init_args.list_presets = getattr(parsed_args, "list_presets", False)
     init_args.log_level = parsed_args.log_level
     return init_args
 
@@ -578,8 +574,6 @@ def _prepare_list_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
     list_args = argparse.Namespace()
     # Include is now always a list from nargs="*"
     list_args.include = parsed_args.include if parsed_args.include else []
-    list_args.tree = getattr(parsed_args, "tree", None)  # Verify this arg exists
-    list_args.count = getattr(parsed_args, "count", None)  # Verify this arg exists
     list_args.log_level = parsed_args.log_level
     return list_args
 

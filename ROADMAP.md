@@ -3,30 +3,21 @@
 
 **Important Clarification**: Zipbundler provides Bundle your packages into a runnable, importable zip
 
-## Key Points
-
-Some of these we just want to consider, and may not want to implement.
-
 ## 🎯 Core Features
+- None at this time.
 
 ## 🧰 CLI Commands
 
 ### CLI Arguments (Implemented)
 
-#### Build Flags
-- **`--input`** / `--in`: Override the name of the input file or directory. Start from an existing build (usually optional). ✅ Implemented
-
 #### Universal Flags
 - **`--compat`** / `--compatability`** / `compat`: Compatibility mode with stdlib zipapp behaviour. Currently defined but not implemented.
 
-### CLI Commands (Other)
-- audit for missing CLI arguments
-- watch argument as float
-
 ## ⚙️ Configuration Features
-
+- None at this time.
 
 ## 🧪 Testing
+- None at this time.
 
 ## 🧑‍💻 Development
 
@@ -54,11 +45,13 @@ The following constants are defined in `constants.py` but not yet used in the co
 - **BUILD_TIMESTAMP_PLACEHOLDER**: Placeholder string for build timestamps (default: "<build-timestamp>"). Used for deterministic builds
 
 ## 🔌 API Implementation
-
+- None at this time.
 
 ## 📚 Documentation
+- None at this time.
 
 ## 🚀 Deployment
+- None at this time.
 
 ## 💡 Future Ideas
 
@@ -66,7 +59,7 @@ The following constants are defined in `constants.py` but not yet used in the co
 - **Plugin System**: Extensible architecture for custom handlers
 
 ## 🔧 Development Infrastructure
-
+- None at this time.
 
 > See [REJECTED.md](REJECTED.md) for experiments and ideas that were explored but intentionally not pursued.
 

@@ -3,9 +3,26 @@
 """Handle the --info flag for displaying interpreter and metadata from archive."""
 
 import argparse
+from pathlib import Path
 
 from zipbundler.build import get_interpreter, get_metadata_from_archive
 from zipbundler.logs import getAppLogger
+
+
+def _display_metadata(logger: object, metadata: dict[str, str]) -> None:
+    """Display metadata from archive."""
+    logger.info("")  # type: ignore[union-attr]
+    logger.info("Metadata:")  # type: ignore[union-attr]
+    fields = [
+        ("display_name", "Name"),
+        ("version", "Version"),
+        ("description", "Description"),
+        ("author", "Author"),
+        ("license", "License"),
+    ]
+    for key, label in fields:
+        if key in metadata:
+            logger.info("  %s: %s", label, metadata[key])  # type: ignore[union-attr]
 
 
 def handle_info_command(
@@ -14,8 +31,11 @@ def handle_info_command(
 ) -> int:
     """Handle the --info flag for displaying interpreter and metadata from archive.
 
+    If source is a directory, auto-derives the output filename (source.stem + .pyz)
+    and looks for the built archive in that location.
+
     Args:
-        source: Path to the archive file
+        source: Path to the archive file or directory
         parser: Argument parser for error handling
 
     Returns:
@@ -27,29 +47,28 @@ def handle_info_command(
         parser.error("--info requires SOURCE archive path")
         return 1  # pragma: no cover
 
+    source_path = Path(source).resolve()
+
+    # If source is a directory, derive the output filename
+    if source_path.is_dir():
+        # Auto-derive output name: directory name + .pyz
+        archive_path = source_path / f"{source_path.name}.pyz"
+        logger.debug("Source is a directory, looking for archive: %s", archive_path)
+    else:
+        archive_path = source_path
+
     try:
         # Display interpreter
-        interpreter = get_interpreter(source)
+        interpreter = get_interpreter(archive_path)
         if interpreter is None:
             logger.info("No interpreter specified in archive")
         else:
             logger.info("Interpreter: %s", interpreter)
 
         # Display metadata if present
-        metadata = get_metadata_from_archive(source)
+        metadata = get_metadata_from_archive(archive_path)
         if metadata:
-            logger.info("")
-            logger.info("Metadata:")
-            if "display_name" in metadata:
-                logger.info("  Name: %s", metadata["display_name"])
-            if "version" in metadata:
-                logger.info("  Version: %s", metadata["version"])
-            if "description" in metadata:
-                logger.info("  Description: %s", metadata["description"])
-            if "author" in metadata:
-                logger.info("  Author: %s", metadata["author"])
-            if "license" in metadata:
-                logger.info("  License: %s", metadata["license"])
+            _display_metadata(logger, metadata)
     except (FileNotFoundError, ValueError):
         logger.exception("Failed to get info from archive")
         return 1

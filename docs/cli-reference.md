@@ -23,7 +23,8 @@ zipbundler SOURCE [OPTIONS]
 - `-p, --python PYTHON`: Python interpreter path for shebang line (default: no shebang)
 - `-m, --main MAIN`: Main entry point as `module:function` or `module` (default: use existing `__main__.py`)
 - `-c, --compress`: Compress files with deflate method (default: uncompressed)
-- `--info`: Display the interpreter from an existing archive
+- `--info`: Display the interpreter and metadata from an existing archive (see `--info` section below)
+- `--compat`: Enable compatibility mode (reserved for future strict Python zipapp compatibility; currently no behavior changes)
 
 **Examples:**
 ```bash
@@ -42,8 +43,14 @@ zipbundler src/myapp -o app.pyz -m "myapp:main" --compress
 # Display info from existing archive
 zipbundler app.pyz --info
 
+# Display info from archive using directory auto-derivation
+zipbundler myapp --info
+
 # Modify existing archive (requires -o)
 zipbundler app.pyz -o app_new.pyz -p "/usr/bin/env python3"
+
+# Build with zipapp compatibility mode
+zipbundler src/myapp -o app.pyz --compat
 ```
 
 **Compatibility Notes:**
@@ -52,6 +59,55 @@ zipbundler app.pyz -o app_new.pyz -p "/usr/bin/env python3"
 - ✅ **Importable** — Files can be imported via `zipimport` or `importlib`
 - ✅ **Flat structure** — Preserves original package paths without transformations
 - ✅ **Archive reading** — Supports reading and modifying existing `.pyz` files
+
+## Special Modes
+
+### `--info` Command
+
+Display interpreter and metadata information from an existing archive.
+
+```bash
+zipbundler --info ARCHIVE
+zipbundler --info DIRECTORY
+```
+
+The `--info` command shows:
+- Interpreter shebang from the archive (if present)
+- Metadata: name, version, description, author, license
+
+**Directory Auto-Derivation:**
+If SOURCE is a directory, zipbundler automatically looks for `{dirname}/{dirname}.pyz` in that directory. This is convenient for the common pattern where your source and built archive share the same parent directory name.
+
+**Examples:**
+```bash
+# Display info from a specific archive file
+zipbundler --info dist/myapp.pyz
+
+# Display info using directory auto-derivation
+# Looks for: myapp/myapp.pyz
+zipbundler --info myapp
+```
+
+### `--compat` Flag
+
+Enable compatibility mode for Python zipapp. This flag is **reserved for future strict Python zipapp compatibility** and ensures your builds will remain compatible with stdlib `zipapp` behavior in future versions.
+
+**Current Status:**
+- ✅ Flag is accepted and parsed
+- ℹ️ Currently no behavior changes when enabled
+- 🔮 May implement strict compatibility mode in future versions
+
+**Recommendation:**
+Use `--compat` if you require compatibility with Python's stdlib `zipapp` module. This ensures your builds won't break if we add strict compatibility mode features in the future.
+
+**Example:**
+```bash
+# Build with compatibility mode enabled
+zipbundler src/myapp -o app.pyz --compat
+
+# Works with all other options
+zipbundler src/myapp -o app.pyz -p "/usr/bin/env python3" -m "myapp:main" --compat
+```
 
 ## Commands
 
