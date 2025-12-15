@@ -155,6 +155,9 @@ fix = ["sync:ai:guidance", "fix:ruff:package", "fix:format:package"]
 # 🔧 Setup and installation
 "pre-commit:install" = "bash dev/install_pre_commit_hooks.sh"
 
+# 📤 Git operations
+"git:push:rebase" = "git pull --rebase && git push"
+
 # 🐍 Python version management
 "env:py310" = "bash dev/env_use_py310.sh"
 "env:py311" = "bash dev/env_use_py311.sh"
