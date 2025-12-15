@@ -105,7 +105,7 @@ def _extract_entry_point_from_pyproject(cwd: Path) -> str | None:  # noqa: PLR09
         return None
 
 
-def _extract_metadata_from_pyproject(cwd: Path) -> dict[str, str] | None:  # noqa: C901, PLR0912
+def extract_metadata_from_pyproject(cwd: Path) -> dict[str, str] | None:  # noqa: C901, PLR0912
     """Extract metadata from pyproject.toml if it exists.
 
     Args:
@@ -401,9 +401,7 @@ def handle_init_command(args: argparse.Namespace) -> int:
     # (controlled by DEFAULT_USE_PYPROJECT_METADATA)
     cwd = Path.cwd().resolve()
     metadata = (
-        _extract_metadata_from_pyproject(cwd)
-        if DEFAULT_USE_PYPROJECT_METADATA
-        else None
+        extract_metadata_from_pyproject(cwd) if DEFAULT_USE_PYPROJECT_METADATA else None
     )
     if metadata:
         logger.debug(

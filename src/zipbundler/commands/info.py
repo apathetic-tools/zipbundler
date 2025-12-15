@@ -5,14 +5,16 @@
 import argparse
 from pathlib import Path
 
+from apathetic_logging import Logger
+
 from zipbundler.build import get_interpreter, get_metadata_from_archive
 from zipbundler.logs import getAppLogger
 
 
-def _display_metadata(logger: object, metadata: dict[str, str]) -> None:
+def _display_metadata(logger: Logger, metadata: dict[str, str]) -> None:
     """Display metadata from archive."""
-    logger.info("")  # type: ignore[union-attr]
-    logger.info("Metadata:")  # type: ignore[union-attr]
+    logger.info("")
+    logger.info("Metadata:")
     fields = [
         ("display_name", "Name"),
         ("version", "Version"),
@@ -22,7 +24,7 @@ def _display_metadata(logger: object, metadata: dict[str, str]) -> None:
     ]
     for key, label in fields:
         if key in metadata:
-            logger.info("  %s: %s", label, metadata[key])  # type: ignore[union-attr]
+            logger.info("  %s: %s", label, metadata[key])
 
 
 def handle_info_command(

@@ -4,7 +4,7 @@
 
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from apathetic_schema import (
     check_schema_conformance,
@@ -242,7 +242,7 @@ def _validate_custom_rules(  # noqa: C901, PLR0912, PLR0915
             )
 
         # Validate main_mode
-        main_mode: str | None = options.get("main_mode")  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+        main_mode = cast("str | None", options.get("main_mode"))  # pyright: ignore[reportUnknownMemberType]
         if main_mode is not None:
             is_valid, error_msg = _validate_main_mode(main_mode)
             if not is_valid:
@@ -254,7 +254,7 @@ def _validate_custom_rules(  # noqa: C901, PLR0912, PLR0915
                 )
 
         # Validate main_name
-        main_name: str | None = options.get("main_name")  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+        main_name = cast("str | None", options.get("main_name"))  # pyright: ignore[reportUnknownMemberType]
         if main_name is not None:
             is_valid, error_msg = _validate_main_name(main_name)
             if not is_valid:

@@ -7,11 +7,7 @@
 - None at this time.
 
 ## 🧰 CLI Commands
-
-### CLI Arguments (Implemented)
-
-#### Universal Flags
-- **`--compat`** / `--compatability`** / `compat`: Compatibility mode with stdlib zipapp behaviour. Currently defined but not implemented.
+- None at this time.
 
 ## ⚙️ Configuration Features
 - None at this time.

@@ -7,6 +7,9 @@ This module verifies that:
 3. The module organization follows the design pattern of one file per public API
 """
 
+# Only run in package mode - stitched mode has different module structure due to serger
+__runtime_mode__ = "package"
+
 import zipbundler.utils as mod_utils
 import zipbundler.utils.compress as mod_compress
 import zipbundler.utils.discovered_packages as mod_discovered
