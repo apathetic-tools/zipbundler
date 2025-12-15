@@ -20,7 +20,6 @@ The following CLI arguments are defined in `cli.py` but not yet used in command 
 
 #### Build Options
 - **`--no-main`**: Disable main insertion. Currently defined but not fully implemented - command handlers check `if args.entry_point:` but don't handle `entry_point=False` case.
-- **`--no-compress`**: Do not compress the zip file (overrides config). ✅ Implemented (handles `compress=False`).
 
 #### Universal Flags
 - **`--compat`** / `--compatability`** / `compat`: Compatibility mode with stdlib zipapp behaviour. Currently defined but not implemented.

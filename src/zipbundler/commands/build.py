@@ -22,6 +22,7 @@ from zipbundler.constants import DEFAULT_DISABLE_BUILD_TIMESTAMP
 from zipbundler.logs import getAppLogger
 from zipbundler.utils import (
     load_gitignore_patterns,
+    resolve_compress,
     resolve_excludes,
     resolve_gitignore,
     resolve_includes,
@@ -430,6 +431,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         # Extract options
         options: OptionsConfig | None = config.get("options")
         shebang: str | None = "#!/usr/bin/env python3"
+        compress = True  # Default: enable compression
         compression: str | None = None
         compression_level: int | None = None
         main_guard = True
@@ -458,9 +460,6 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                 elif isinstance(compression_val, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
                     # Backward compatibility: True -> "deflate", False -> "stored"
                     compression = "deflate" if compression_val else "stored"
-            # Default to "stored" if not specified
-            if compression is None:
-                compression = "stored"
 
             # Compression level
             if "compression_level" in options:
@@ -473,6 +472,10 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                 main_guard_val = options["main_guard"]
                 if isinstance(main_guard_val, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
                     main_guard = main_guard_val
+
+        # Resolve compress boolean (CLI + config + default)
+        # Priority: CLI flag > config > default
+        compress = resolve_compress(raw_config, args=args)
 
         # Resolve disable_build_timestamp (CLI + env var + default)
         # Priority: CLI flag (if True) > env var > default
@@ -508,9 +511,6 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                     shebang = args.shebang
                 else:
                     shebang = f"#!{args.shebang}"
-        if hasattr(args, "compress") and args.compress is not None:
-            # CLI --compress flag: True -> "deflate", False -> "stored"
-            compression = "deflate" if args.compress else "stored"
         if hasattr(args, "compression_level") and args.compression_level is not None:
             compression_level = args.compression_level
             # compression_level only applies to deflate, ensure compression is deflate
@@ -521,6 +521,18 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
         if hasattr(args, "dry_run") and args.dry_run:
             # Handle dry_run if provided
             pass
+
+        # Apply compress boolean to determine compression method
+        # If compress=False, use "stored" (no compression)
+        # If compress=True, use configured compression method (or default to "deflate")
+        if not compress:
+            compression = "stored"
+        elif compression is None:
+            # No compression method specified, use "deflate" if compress=True
+            compression = "deflate"
+        elif compression == "stored" and compress:
+            # If config says "stored" but compress=True, upgrade to deflate
+            compression = "deflate"
 
         # Build the zipapp
         logger.info("Building zipapp from configuration: %s", config_path.name)

@@ -79,6 +79,7 @@ class OptionsConfig(TypedDict, total=False):
             - False: No shebang
             - str: Custom shebang path (with or without #!)
         main_guard: If True, wrap entry point in `if __name__ == "__main__":` guard
+        compress: If True, compress the zip file (default: True)
         compression: Compression method to use (default: "stored")
         compression_level: Compression level 0-9 (only valid with "deflate")
         respect_gitignore: If True, respect .gitignore patterns (default: True)
@@ -86,6 +87,7 @@ class OptionsConfig(TypedDict, total=False):
 
     shebang: bool | str
     main_guard: bool
+    compress: bool
     compression: CompressionMethod
     compression_level: int  # 0-9
     respect_gitignore: bool
@@ -99,6 +101,7 @@ class OptionsConfigResolved(TypedDict):
     Fields:
         shebang: Resolved shebang (str path, or None if disabled)
         main_guard: Whether to wrap entry point in __main__ guard
+        compress: Whether to compress the zip file
         compression: Compression method to use
         compression_level: Compression level 0-9 (only for deflate)
         respect_gitignore: Whether to respect .gitignore patterns
@@ -108,6 +111,7 @@ class OptionsConfigResolved(TypedDict):
 
     shebang: str | None  # None if --no-shebang, else string path
     main_guard: bool
+    compress: bool
     compression: CompressionMethod
     compression_level: int | None  # None unless using deflate
     respect_gitignore: bool
