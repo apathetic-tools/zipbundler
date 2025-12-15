@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v0.8.0 (2025-12-15)
+
+### Bug Fixes
+
+- **poe**: Use shell syntax for git:push:rebase to properly handle && operator
+  ([`8f5473f`](https://github.com/apathetic-tools/zipbundler/commit/8f5473f3412531046fb5bb50d7494572e3686779))
+
+### Features
+
+- **poe**: Add git:push:rebase task for pull --rebase && push workflow
+  ([`20f6a2a`](https://github.com/apathetic-tools/zipbundler/commit/20f6a2ad86653af146501b7336c1b02ad1e392fb))
+
+
 ## v0.7.1 (2025-12-15)
 
 ### Bug Fixes
