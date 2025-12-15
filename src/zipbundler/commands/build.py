@@ -475,13 +475,10 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                     main_guard = main_guard_val
 
         # Resolve disable_build_timestamp (CLI + env var + default)
-        # Priority: CLI arg > env var > default
-        if (
-            hasattr(args, "disable_build_timestamp")
-            and args.disable_build_timestamp is not None
-        ):
-            # CLI arg was provided
-            disable_build_timestamp = bool(args.disable_build_timestamp)
+        # Priority: CLI flag (if True) > env var > default
+        if getattr(args, "disable_build_timestamp", False):
+            # CLI flag --disable-build-timestamp was explicitly provided
+            disable_build_timestamp = True
         else:
             # Check environment variable
             env_disable = os.getenv("DISABLE_BUILD_TIMESTAMP")
