@@ -22,6 +22,7 @@ from zipbundler.config import (
 from zipbundler.constants import (
     DEFAULT_DISABLE_BUILD_TIMESTAMP,
     DEFAULT_LICENSE_FALLBACK,
+    DEFAULT_USE_PYPROJECT_METADATA,
 )
 from zipbundler.logs import getAppLogger
 from zipbundler.utils import (
@@ -456,7 +457,8 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                         logger.warning("metadata.%s must be a string, ignoring", key)
 
         # If no metadata from config, try extracting from pyproject.toml
-        if not metadata:
+        # (controlled by DEFAULT_USE_PYPROJECT_METADATA)
+        if not metadata and DEFAULT_USE_PYPROJECT_METADATA:
             metadata = _extract_metadata_from_pyproject(cwd)
             if metadata:
                 logger.debug("Extracted metadata from pyproject.toml")

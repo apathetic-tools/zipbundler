@@ -10,6 +10,7 @@ from typing import Any
 
 from apathetic_utils import load_jsonc, load_toml
 
+from zipbundler.constants import DEFAULT_USE_PYPROJECT_METADATA
 from zipbundler.logs import getAppLogger
 from zipbundler.meta import PROGRAM_CONFIG
 
@@ -397,8 +398,13 @@ def handle_init_command(args: argparse.Namespace) -> int:
         return 1
 
     # Try to auto-detect metadata and entry_point from pyproject.toml
+    # (controlled by DEFAULT_USE_PYPROJECT_METADATA)
     cwd = Path.cwd().resolve()
-    metadata = _extract_metadata_from_pyproject(cwd)
+    metadata = (
+        _extract_metadata_from_pyproject(cwd)
+        if DEFAULT_USE_PYPROJECT_METADATA
+        else None
+    )
     if metadata:
         logger.debug(
             "Auto-detected metadata from pyproject.toml, injecting into config"

@@ -15,7 +15,7 @@ from .commands import (
     handle_watch_command,
     handle_zipapp_style_command,
 )
-from .constants import DEFAULT_WATCH_INTERVAL
+from .constants import DEFAULT_DRY_RUN, DEFAULT_WATCH_INTERVAL
 from .logs import getAppLogger
 from .meta import DESCRIPTION, PROGRAM_DISPLAY, PROGRAM_PACKAGE, PROGRAM_SCRIPT
 
@@ -326,7 +326,11 @@ def _setup_parser() -> argparse.ArgumentParser:  # noqa: PLR0915
     build_opts.add_argument(
         "--dry-run",
         action="store_true",
-        help="Simulate build actions without copying or deleting files.",
+        default=DEFAULT_DRY_RUN,
+        help=(
+            "Simulate build actions without copying or deleting files "
+            f"(default: {DEFAULT_DRY_RUN})."
+        ),
     )
 
     # gitignore behavior

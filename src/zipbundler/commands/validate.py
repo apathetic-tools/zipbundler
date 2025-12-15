@@ -7,12 +7,13 @@ from pathlib import Path
 from typing import Any
 
 from zipbundler.config import load_and_validate_config
+from zipbundler.constants import DEFAULT_OUT_DIR
 from zipbundler.logs import getAppLogger
 
 
 def resolve_output_path_from_config(
     output_config: dict[str, Any] | None,
-    default_directory: str = "dist",
+    default_directory: str | None = None,
     default_name: str = "bundle",
 ) -> Path:
     """Resolve output path from config output section.
@@ -24,15 +25,19 @@ def resolve_output_path_from_config(
     - None: Uses default_directory and default_name
 
     Args:
-        output_config: Output configuration dict with optional 'path', 'directory',
-            'name'
-        default_directory: Default directory if not specified (default: "dist")
+        output_config: Output configuration dict with optional 'path',
+            'directory', 'name'
+        default_directory: Default directory if not specified (None uses
+            DEFAULT_OUT_DIR)
         default_name: Default filename (without extension) if not specified
             (default: "bundle")
 
     Returns:
         Resolved Path object
     """
+    if default_directory is None:
+        default_directory = DEFAULT_OUT_DIR
+
     if not output_config:
         return Path(f"{default_directory}/{default_name}.pyz")
 
