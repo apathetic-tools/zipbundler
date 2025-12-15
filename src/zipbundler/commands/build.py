@@ -4,6 +4,7 @@
 
 import argparse
 import importlib.util
+import os
 from importlib.metadata import distributions as _distributions
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from zipbundler.config import (
     OutputConfig,
     load_and_validate_config,
 )
+from zipbundler.constants import DEFAULT_DISABLE_BUILD_TIMESTAMP
 from zipbundler.logs import getAppLogger
 from zipbundler.utils import (
     load_gitignore_patterns,
@@ -472,6 +474,29 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                 if isinstance(main_guard_val, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
                     main_guard = main_guard_val
 
+        # Resolve disable_build_timestamp (CLI + env var + default)
+        # Priority: CLI arg > env var > default
+        if (
+            hasattr(args, "disable_build_timestamp")
+            and args.disable_build_timestamp is not None
+        ):
+            # CLI arg was provided
+            disable_build_timestamp = bool(args.disable_build_timestamp)
+        else:
+            # Check environment variable
+            env_disable = os.getenv("DISABLE_BUILD_TIMESTAMP")
+            if env_disable is not None:
+                # Parse boolean from string (accept "true", "1", "yes", "on")
+                disable_build_timestamp = env_disable.lower() in (
+                    "true",
+                    "1",
+                    "yes",
+                    "on",
+                )
+            else:
+                # Use default from constants
+                disable_build_timestamp = DEFAULT_DISABLE_BUILD_TIMESTAMP
+
         # CLI args override config
         if hasattr(args, "output") and args.output:
             output = Path(args.output).resolve()
@@ -515,6 +540,7 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
             metadata=metadata,
             force=getattr(args, "force", False),
             additional_includes=additional_includes if additional_includes else None,
+            disable_build_timestamp=disable_build_timestamp,
         )
     except (FileNotFoundError, ValueError, TypeError) as e:
         logger.errorIfNotDebug(str(e))

@@ -5,16 +5,21 @@ import io
 import stat
 import tempfile
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 from apathetic_utils import is_excluded_raw
 
 from .config.config_types import PathResolved
-from .constants import DEFAULT_SOURCE_BASES
+from .constants import BUILD_TIMESTAMP_PLACEHOLDER, DEFAULT_SOURCE_BASES
 from .logs import getAppLogger
 
 
-def _generate_pkg_info(metadata: dict[str, str] | None) -> str | None:
+def _generate_pkg_info(
+    metadata: dict[str, str] | None,
+    *,
+    disable_build_timestamp: bool = False,
+) -> str | None:
     """Generate PKG-INFO content from metadata dictionary.
 
     PKG-INFO follows the Python packaging metadata format (PEP 241/314).
@@ -22,6 +27,8 @@ def _generate_pkg_info(metadata: dict[str, str] | None) -> str | None:
     Args:
         metadata: Dictionary with optional keys: display_name, description,
             version, author, license
+        disable_build_timestamp: If True, use placeholder instead of real
+            timestamp for deterministic builds
 
     Returns:
         PKG-INFO content as string, or None if no metadata provided
@@ -45,6 +52,13 @@ def _generate_pkg_info(metadata: dict[str, str] | None) -> str | None:
         lines.append(f"Author: {metadata['author']}")
     if "license" in metadata:
         lines.append(f"License: {metadata['license']}")
+
+    # Add build timestamp
+    if disable_build_timestamp:
+        lines.append(f"Build-Timestamp: {BUILD_TIMESTAMP_PLACEHOLDER}")
+    else:
+        build_time = datetime.now(timezone.utc).isoformat()
+        lines.append(f"Build-Timestamp: {build_time}")
 
     # Add metadata version (PEP 314 format)
     lines.append("Metadata-Version: 2.1")
@@ -182,6 +196,7 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     metadata: dict[str, str] | None = None,
     force: bool = False,
     additional_includes: list[tuple[Path, Path | None]] | None = None,
+    disable_build_timestamp: bool = False,
 ) -> None:
     """Build a zipapp-compatible zip file.
 
@@ -210,6 +225,8 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
         additional_includes: Optional list of (file_path, destination) tuples
             for individual files to include in the zip. If destination is None,
             uses the file's basename. Useful for including data files or configs.
+        disable_build_timestamp: If True, use placeholder instead of real
+            timestamp in PKG-INFO for deterministic builds. Defaults to False.
 
     Raises:
         ValueError: If output path is invalid or packages are empty
@@ -328,7 +345,9 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
         output, "w", compression=compression_const, compresslevel=compresslevel
     ) as zf:
         # Write PKG-INFO if metadata is provided
-        pkg_info = _generate_pkg_info(metadata)
+        pkg_info = _generate_pkg_info(
+            metadata, disable_build_timestamp=disable_build_timestamp
+        )
         if pkg_info:
             zf.writestr("PKG-INFO", pkg_info)
             logger.debug("Wrote PKG-INFO with metadata")

@@ -91,6 +91,29 @@ class OptionsConfig(TypedDict, total=False):
     respect_gitignore: bool
 
 
+class OptionsConfigResolved(TypedDict):
+    """Resolved options after merging CLI args, env vars, and config.
+
+    All fields are required (will be populated with defaults during resolution).
+
+    Fields:
+        shebang: Resolved shebang (str path, or None if disabled)
+        main_guard: Whether to wrap entry point in __main__ guard
+        compression: Compression method to use
+        compression_level: Compression level 0-9 (only for deflate)
+        respect_gitignore: Whether to respect .gitignore patterns
+        disable_build_timestamp: Whether to use placeholder instead of real
+            timestamp (CLI-only + env var, never from config)
+    """
+
+    shebang: str | None  # None if --no-shebang, else string path
+    main_guard: bool
+    compression: CompressionMethod
+    compression_level: int | None  # None unless using deflate
+    respect_gitignore: bool
+    disable_build_timestamp: bool
+
+
 class MetadataConfig(TypedDict, total=False):
     """Metadata configuration for the zip file.
 

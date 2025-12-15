@@ -211,6 +211,7 @@ def create_archive(  # noqa: PLR0912
             entry_point=entry_point_code,
             shebang=shebang,
             compression=compression,
+            disable_build_timestamp=False,
         )
     finally:
         # Clean up temporary directory if we created one
@@ -390,6 +391,7 @@ def build_zip(  # noqa: C901, PLR0912, PLR0913, PLR0915
         main_guard=main_guard,
         metadata=metadata,
         force=False,  # API doesn't expose force, use default incremental behavior
+        disable_build_timestamp=False,
     )
 
     # Calculate result

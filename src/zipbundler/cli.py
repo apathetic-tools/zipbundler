@@ -519,6 +519,9 @@ def _prepare_build_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
     build_args.add_exclude = getattr(parsed_args, "add_exclude", None)
     build_args.respect_gitignore = getattr(parsed_args, "respect_gitignore", None)
     # main_guard removed (handled via config)
+    build_args.disable_build_timestamp = getattr(
+        parsed_args, "disable_build_timestamp", None
+    )
     build_args.dry_run = getattr(parsed_args, "dry_run", False)
     build_args.force = getattr(parsed_args, "force", False)
     build_args.strict = getattr(parsed_args, "strict", False)
@@ -558,6 +561,9 @@ def _prepare_watch_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
     watch_args.exclude = getattr(parsed_args, "exclude", None)
     watch_args.add_exclude = getattr(parsed_args, "add_exclude", None)
     watch_args.respect_gitignore = getattr(parsed_args, "respect_gitignore", None)
+    watch_args.disable_build_timestamp = getattr(
+        parsed_args, "disable_build_timestamp", None
+    )
     watch_args.watch = parsed_args.watch  # Can be float or None
     # main_guard removed (handled via config)
     watch_args.log_level = parsed_args.log_level

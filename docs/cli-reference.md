@@ -79,6 +79,8 @@ zipbundler build [OPTIONS]
 - `--no-compress`: Disable compression
 - `--compression-level LEVEL`: Compression level 0-9 (only with --compress)
 - `--no-main-guard`: Disable main guard insertion
+- `--disable-build-timestamp`: Disable build timestamps for deterministic builds
+  (uses placeholder in PKG-INFO metadata)
 - `--dry-run`: Preview what would be bundled without creating zip
 - `-f, --force`: Force rebuild even if up-to-date
 - `--strict`: Fail on configuration warnings
@@ -276,5 +278,11 @@ zipbundler build \
 
 # Dry run to check configuration
 zipbundler build --dry-run --verbose
+
+# Build with deterministic timestamps for reproducible builds
+zipbundler build --disable-build-timestamp
+
+# Build with deterministic timestamps via environment variable
+DISABLE_BUILD_TIMESTAMP=true zipbundler build
 ```
 
