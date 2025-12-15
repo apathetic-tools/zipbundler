@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.6.0 (2025-12-15)
+
+### Features
+
+- **build-timestamp**: Implement --disable-build-timestamp for deterministic builds
+  ([`6dd168f`](https://github.com/apathetic-tools/zipbundler/commit/6dd168f4b1c3a69241986c6e85ba657475192508))
+
+
 ## v0.5.0 (2025-12-15)
 
 ### Features
