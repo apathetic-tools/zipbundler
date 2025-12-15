@@ -21,9 +21,6 @@ The following CLI arguments are defined in `cli.py` but not yet used in command 
 #### Universal Flags
 - **`--compat`** / `--compatability`** / `compat`: Compatibility mode with stdlib zipapp behaviour. Currently defined but not implemented.
 
-#### Terminal Flags
-- **`--color`** / `--no-color`** / `use_color`: Force-enable or disable ANSI color output (overrides auto-detect). Currently defined but not used.
-
 ### CLI Commands (Other)
 - audit for missing CLI arguments
 - watch argument as float

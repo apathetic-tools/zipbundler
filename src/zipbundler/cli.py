@@ -570,7 +570,7 @@ def _prepare_watch_args(parsed_args: argparse.Namespace) -> argparse.Namespace:
     return watch_args
 
 
-def main(args: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
+def main(args: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912, C901
     """Main entry point for the zipbundler CLI (zipapp-style only)."""
     logger = getAppLogger()
 
@@ -580,6 +580,13 @@ def main(args: list[str] | None = None) -> int:  # noqa: PLR0911, PLR0912
     # Initialize logger with CLI args
     resolved_log_level = logger.determineLogLevel(args=parsed_args)
     logger.setLevel(resolved_log_level)
+
+    # Initialize color output based on CLI args
+    use_color = getattr(parsed_args, "use_color", None)
+    if use_color is not None:
+        logger.enable_color = use_color
+    else:
+        logger.enable_color = logger.determineColorEnabled()
 
     # --- Handle early exits (version, etc.) ---
     early_exit_code = _handle_early_exits(parsed_args)

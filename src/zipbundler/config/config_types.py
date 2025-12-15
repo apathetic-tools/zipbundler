@@ -84,6 +84,10 @@ class OptionsConfig(TypedDict, total=False):
         compression: Compression method to use (default: "stored")
         compression_level: Compression level 0-9 (only valid with "deflate")
         respect_gitignore: If True, respect .gitignore patterns (default: True)
+        use_color: Force-enable or disable ANSI color output. Can be:
+            - True: Force-enable color (overrides auto-detect)
+            - False: Disable color
+            - None: Auto-detect based on terminal (default)
     """
 
     shebang: bool | str
@@ -93,6 +97,7 @@ class OptionsConfig(TypedDict, total=False):
     compression: CompressionMethod
     compression_level: int  # 0-9
     respect_gitignore: bool
+    use_color: bool | None
 
 
 class OptionsConfigResolved(TypedDict):
@@ -108,6 +113,7 @@ class OptionsConfigResolved(TypedDict):
         compression: Compression method to use
         compression_level: Compression level 0-9 (only for deflate)
         respect_gitignore: Whether to respect .gitignore patterns
+        use_color: Whether to use color (True/False/None for auto-detect)
         disable_build_timestamp: Whether to use placeholder instead of real
             timestamp (CLI-only + env var, never from config)
     """
@@ -119,6 +125,7 @@ class OptionsConfigResolved(TypedDict):
     compression: CompressionMethod
     compression_level: int | None  # None unless using deflate
     respect_gitignore: bool
+    use_color: bool | None  # True, False, or None (auto-detect)
     disable_build_timestamp: bool
 
 

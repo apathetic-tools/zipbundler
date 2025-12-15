@@ -140,7 +140,8 @@ fix = ["sync:ai:guidance", "fix:ruff:package", "fix:format:package"]
 "fix:format:dist" = { shell = "if [ -d dist ]; then ruff format dist -q; fi" }
 
 # 🧩 Build and license
-"sync:ai:guidance" = "python -m sync_ai_guidance --quiet"
+#"sync:ai:guidance" = "python -m sync_ai_guidance --quiet"
+"sync:ai:guidance" = "echo 'currently disabled'"
 # this creates the stitched script from the module, it need to use serger not zipbundler to do that
 "build:stitched" = "python -m serger --quiet"
 # Build zipbundler as a zipapp (for testing zipapp runtime mode)
