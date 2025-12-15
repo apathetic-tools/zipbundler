@@ -257,7 +257,7 @@ class TestZipappCliCompat:
     ) -> None:
         """Test output extension handling."""
         # Test with a name that doesn't have .pyz extension
-        output = tmp_path / "myapp"
+        output = tmp_path / "output"
         cmd = [
             *zipbundler_cli,
             str(simple_package),
