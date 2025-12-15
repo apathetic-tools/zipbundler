@@ -2,6 +2,59 @@
 
 <!-- version list -->
 
+## v0.7.0 (2025-12-15)
+
+### Features
+
+- **bases**: Implement DEFAULT_SOURCE_BASES and DEFAULT_INSTALLED_BASES for directory discovery
+  ([`2de4060`](https://github.com/apathetic-tools/zipbundler/commit/2de4060107157cbbcd4091cde0c6e76ac598c4b6))
+
+- **color**: Implement color override settings with CLI flags and config support
+  ([`b86a7f0`](https://github.com/apathetic-tools/zipbundler/commit/b86a7f07056fcf1de218d8fac69ec190809452dd))
+
+- **compat**: Implement --compat flag and reorganize tests
+  ([`6ee658e`](https://github.com/apathetic-tools/zipbundler/commit/6ee658ea3624edc8d259dca8d310e635eafc3d2a))
+
+- **compress**: Implement compress boolean option with CLI flags and config support
+  ([`ca0ad92`](https://github.com/apathetic-tools/zipbundler/commit/ca0ad92e02bfcaa03d73084f90baca415af21f65))
+
+- **constants**: Implement and integrate DEFAULT_OUT_DIR, DEFAULT_DRY_RUN, and
+  DEFAULT_USE_PYPROJECT_METADATA
+  ([`f653044`](https://github.com/apathetic-tools/zipbundler/commit/f6530442805daf318c45ecf64729b0ced173489f))
+
+- **constants**: Implement DEFAULT_MAIN_MODE and DEFAULT_MAIN_NAME with CLI, config, and validation
+  support
+  ([`cb1e0fb`](https://github.com/apathetic-tools/zipbundler/commit/cb1e0fb46109de99e2b5d89a2bb6a86512960660))
+
+- **metadata**: Implement cascading metadata priority with DEFAULT_LICENSE_FALLBACK
+  ([`d6d9556`](https://github.com/apathetic-tools/zipbundler/commit/d6d9556c76786c6df274a5d410e467169b749a5e))
+
+- **no-main**: Implement --no-main CLI flag and insert_main config option
+  ([`f9e16ea`](https://github.com/apathetic-tools/zipbundler/commit/f9e16ea1dbb0547b0c2d3ea5fa671302e41e9b7c))
+
+- **zip-includes**: Implement type:zip support for composing builds from pre-built modules
+  ([`9828479`](https://github.com/apathetic-tools/zipbundler/commit/982847949498f2017cc6aeb44abe0d3e9c331bed))
+
+### Refactoring
+
+- **utils**: Reorganize utils into focused submodules
+  ([`2de4060`](https://github.com/apathetic-tools/zipbundler/commit/2de4060107157cbbcd4091cde0c6e76ac598c4b6))
+
+### Testing
+
+- Cleanup trivial, redundant, and brittle tests
+  ([`dd83f0f`](https://github.com/apathetic-tools/zipbundler/commit/dd83f0f228e4170b764eaa29f28e788d09e71288))
+
+- **build**: Add comprehensive tests for --disable-build-timestamp feature
+  ([`5bf0b3a`](https://github.com/apathetic-tools/zipbundler/commit/5bf0b3a9da5bbcb40688cbf445128f42676fe2b8))
+
+- **gitignore**: Add comprehensive test coverage for gitignore feature
+  ([`2fb9092`](https://github.com/apathetic-tools/zipbundler/commit/2fb90921bc3172af25fc96cd41a16646b6d1fef5))
+
+- **runtime-mode**: Mark test files to run only in package mode for serger compatibility
+  ([`650b7c9`](https://github.com/apathetic-tools/zipbundler/commit/650b7c972f78887343d25ce8d383486d7bcb1c11))
+
+
 ## v0.6.0 (2025-12-15)
 
 ### Features
