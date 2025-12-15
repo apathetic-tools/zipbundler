@@ -7,10 +7,12 @@ from pathlib import Path
 
 import pytest
 
+import zipbundler.build as mod_build_zipapp
 import zipbundler.cli as mod_cli
 import zipbundler.commands.build as mod_build
 import zipbundler.commands.validate as mod_validate
 import zipbundler.constants as mod_constants
+import zipbundler.utils as mod_utils
 
 
 class TestDefaultOutDir:
@@ -354,3 +356,145 @@ version = "1.2.3"
                     assert "test-package" not in pkg_info
         finally:
             os.chdir(original_cwd)
+
+
+class TestDefaultSourceBases:
+    """Test DEFAULT_SOURCE_BASES constant usage."""
+
+    def test_default_source_bases_value(self) -> None:
+        """Test that DEFAULT_SOURCE_BASES has expected values."""
+        assert isinstance(mod_constants.DEFAULT_SOURCE_BASES, list)
+        assert len(mod_constants.DEFAULT_SOURCE_BASES) > 0
+        # Should contain common source directories
+        assert "src" in mod_constants.DEFAULT_SOURCE_BASES
+        assert "lib" in mod_constants.DEFAULT_SOURCE_BASES
+        assert "packages" in mod_constants.DEFAULT_SOURCE_BASES
+
+    def test_build_uses_source_bases_for_archive_root(self, tmp_path: Path) -> None:
+        """Test that build recognizes source directories as archive root."""
+        original_cwd = Path.cwd()
+        try:
+            os.chdir(tmp_path)
+
+            # Create package in a source directory
+            src_dir = tmp_path / "src" / "mypackage"
+            src_dir.mkdir(parents=True)
+            (src_dir / "__init__.py").write_text("# Package")
+            (src_dir / "module.py").write_text("def hello(): return 'world'")
+
+            output_file = tmp_path / "bundle.pyz"
+
+            # Build with default source_bases
+            mod_build_zipapp.build_zipapp(
+                output=output_file,
+                packages=[src_dir.parent],  # Pass src/
+            )
+
+            assert output_file.exists()
+
+            # Verify that package is at root, not under src/
+            with zipfile.ZipFile(output_file, "r") as zf:
+                names = zf.namelist()
+                # Should have mypackage files at root, not src/mypackage
+                assert any("mypackage/__init__.py" in name for name in names)
+                assert not any("src/mypackage" in name for name in names)
+
+        finally:
+            os.chdir(original_cwd)
+
+    def test_build_can_override_source_bases(self, tmp_path: Path) -> None:
+        """Test that build allows overriding source_bases."""
+        original_cwd = Path.cwd()
+        try:
+            os.chdir(tmp_path)
+
+            # Create package in a custom directory (not in default bases)
+            # When "mylibs" not in source_bases, it should include full path
+            mylibs_dir = tmp_path / "mylibs" / "mypackage"
+            mylibs_dir.mkdir(parents=True)
+            (mylibs_dir / "__init__.py").write_text("# Package")
+
+            output_file = tmp_path / "bundle.pyz"
+
+            # Build WITHOUT "mylibs" in source_bases - should keep full path
+            mod_build_zipapp.build_zipapp(
+                output=output_file,
+                packages=[mylibs_dir.parent],  # Pass mylibs/
+                source_bases=["src", "lib", "packages"],  # mylibs not included
+            )
+
+            assert output_file.exists()
+
+            # Verify that mylibs is NOT recognized as source base, so path is preserved
+            with zipfile.ZipFile(output_file, "r") as zf:
+                names = zf.namelist()
+                # Should have mylibs/mypackage since mylibs not in source_bases
+                assert any("mylibs/mypackage/__init__.py" in name for name in names)
+
+            # Now build WITH "mylibs" in source_bases - should use it as archive root
+            output_file2 = tmp_path / "bundle2.pyz"
+            mod_build_zipapp.build_zipapp(
+                output=output_file2,
+                packages=[mylibs_dir.parent],  # Pass mylibs/
+                source_bases=["mylibs", "src", "lib"],  # mylibs NOW included
+            )
+
+            assert output_file2.exists()
+
+            # Verify that mylibs is now recognized as source base
+            with zipfile.ZipFile(output_file2, "r") as zf:
+                names = zf.namelist()
+                # Should have mypackage at root, not under mylibs/
+                assert any("mypackage/__init__.py" in name for name in names)
+                assert not any("mylibs/mypackage" in name for name in names)
+
+        finally:
+            os.chdir(original_cwd)
+
+
+class TestDefaultInstalledBases:
+    """Test DEFAULT_INSTALLED_BASES constant and installed packages discovery."""
+
+    def test_default_installed_bases_value(self) -> None:
+        """Test that DEFAULT_INSTALLED_BASES has expected values."""
+        assert isinstance(mod_constants.DEFAULT_INSTALLED_BASES, list)
+        assert len(mod_constants.DEFAULT_INSTALLED_BASES) > 0
+        # Should contain common site-packages names
+        assert "site-packages" in mod_constants.DEFAULT_INSTALLED_BASES
+        assert "dist-packages" in mod_constants.DEFAULT_INSTALLED_BASES
+
+    def test_discover_installed_packages_roots_returns_list(self) -> None:
+        """Test that discover_installed_packages_roots returns a list."""
+        roots = mod_utils.discover_installed_packages_roots()
+        assert isinstance(roots, list)
+        # Should be able to call without error, may be empty in some environments
+        assert all(isinstance(root, str) for root in roots)
+
+    def test_discover_installed_packages_roots_deduplicates(self) -> None:
+        """Test that discovered roots are deduplicated."""
+        roots = mod_utils.discover_installed_packages_roots()
+        # Should not have duplicates
+        assert len(roots) == len(set(roots))
+
+    def test_discover_installed_packages_roots_paths_exist(self) -> None:
+        """Test that discovered roots point to existing directories."""
+        roots = mod_utils.discover_installed_packages_roots()
+        for root in roots:
+            root_path = Path(root)
+            # Should be an absolute path
+            assert root_path.is_absolute()
+            # Should exist or be a valid Python site-packages location
+            # (some may not exist in minimal environments)
+            if root_path.exists():
+                assert root_path.is_dir()
+
+    def test_discover_installed_packages_roots_contains_site_packages_markers(
+        self,
+    ) -> None:
+        """Test that discovered roots contain site-packages or dist-packages."""
+        roots = mod_utils.discover_installed_packages_roots()
+        # If discovered, should have site-packages or dist-packages in path
+        for root in roots:
+            assert "site-packages" in root or "dist-packages" in root, (
+                f"Path {root} missing site-packages or dist-packages"
+            )

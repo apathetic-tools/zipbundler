@@ -178,6 +178,10 @@ class RootConfig(TypedDict, total=False):
 
     Fields:
         packages: Required list of package paths or glob patterns to include
+        source_bases: Optional list of directories to search for packages
+            (default: ["src", "lib", "packages"])
+        installed_bases: Optional list of site-packages directory names
+            (default: ["site-packages", "dist-packages"])
         exclude: Optional list of glob patterns for files/directories to exclude
         include: Optional list of additional files/directories to include
         entry_point: Optional entry point in format "module.path:function" or
@@ -188,6 +192,8 @@ class RootConfig(TypedDict, total=False):
     """
 
     packages: list[str]  # Required
+    source_bases: list[str]
+    installed_bases: list[str]
     exclude: list[str]
     include: list[str | IncludeConfig]
     entry_point: str

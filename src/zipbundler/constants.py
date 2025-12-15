@@ -37,6 +37,10 @@ DEFAULT_SOURCE_BASES: list[str] = [
     "lib",
     "packages",
 ]  # Default directories to search for packages
+DEFAULT_INSTALLED_BASES: list[str] = [
+    "site-packages",
+    "dist-packages",
+]  # Default subdirectory names for installed packages
 DEFAULT_MAIN_MODE: str = "auto"  # Automatically detect and generate __main__ block
 DEFAULT_MAIN_NAME: str | None = None  # Auto-detect main function (default)
 DEFAULT_DISABLE_BUILD_TIMESTAMP: bool = False  # Use real timestamps by default

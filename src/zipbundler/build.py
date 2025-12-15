@@ -231,6 +231,7 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     disable_build_timestamp: bool = False,
     input_archive: Path | str | None = None,
     preserve_input_files: bool = True,
+    source_bases: list[str] | None = None,
 ) -> None:
     """Build a zipapp-compatible zip file.
 
@@ -271,6 +272,10 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
             input archive and merge with new packages. If False (REPLACE mode), wipe
             all existing files from input archive and use only new packages. Only
             applies when input_archive is set.
+        source_bases: Optional list of directories to recognize as source base
+            directories (e.g., "src", "lib"). When a package path is one of these,
+            it's used as the archive root so nested packages extract to root.
+            Defaults to DEFAULT_SOURCE_BASES if not provided.
 
     Raises:
         ValueError: If output path is invalid or packages are empty
@@ -280,6 +285,10 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     if not packages:
         xmsg = "At least one package must be provided"
         raise ValueError(xmsg)
+
+    # Use provided source_bases or default
+    if source_bases is None:
+        source_bases = DEFAULT_SOURCE_BASES
 
     compression_const, compression_name = _get_compression_method(compression)
     # Default compression level is 6 (zlib default) if not specified for deflate
@@ -319,7 +328,7 @@ def build_zipapp(  # noqa: C901, PLR0912, PLR0913, PLR0915
         # Otherwise, use the package parent.
         # This ensures src/zipbundler ends up as zipbundler/ not src/zipbundler/
         archive_root = pkg_path.parent
-        if pkg_path.name in DEFAULT_SOURCE_BASES:
+        if pkg_path.name in source_bases:
             # This is a source directory - use it as root so packages extract to root
             archive_root = pkg_path
             logger.trace(

@@ -27,7 +27,6 @@ The following constants are defined in `constants.py` but not yet used in the co
 
 - **DEFAULT_COMMENTS_MODE**: Strip comments from files before bundling (default: "keep")
 - **DEFAULT_DOCSTRING_MODE**: Strip docstrings from files before bundling (default: "keep")
-- **DEFAULT_SOURCE_BASES**: Directories to search for packages (default: ["src", "lib", "packages"])
 - **DEFAULT_MAIN_MODE**: Generate the `__main__` block (default: "auto")
 - **DEFAULT_MAIN_NAME**: Name to use for main function (default: None, auto-detect)
 
