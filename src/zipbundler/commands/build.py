@@ -11,6 +11,7 @@ from pathlib import Path
 from apathetic_utils import cast_hint, has_glob_chars
 
 from zipbundler.build import build_zipapp
+from zipbundler.commands.init import _extract_metadata_from_pyproject
 from zipbundler.commands.validate import resolve_output_path_from_config
 from zipbundler.config import (
     MetadataConfig,
@@ -18,7 +19,10 @@ from zipbundler.config import (
     OutputConfig,
     load_and_validate_config,
 )
-from zipbundler.constants import DEFAULT_DISABLE_BUILD_TIMESTAMP
+from zipbundler.constants import (
+    DEFAULT_DISABLE_BUILD_TIMESTAMP,
+    DEFAULT_LICENSE_FALLBACK,
+)
 from zipbundler.logs import getAppLogger
 from zipbundler.utils import (
     load_gitignore_patterns,
@@ -431,9 +435,13 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                     }
                     excludes.append(exc)  # type: ignore[arg-type]
 
-        # Extract metadata
+        # Extract metadata with cascading priority:
+        # 1. Config metadata (if provided)
+        # 2. pyproject.toml metadata (if no config metadata)
+        # 3. Fallback defaults for missing fields
         metadata_config: MetadataConfig | None = config.get("metadata")
         metadata: dict[str, str] | None = None
+
         if metadata_config:
             if not isinstance(metadata_config, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
                 logger.warning("metadata field must be an object, ignoring")
@@ -446,6 +454,20 @@ def handle_build_command(args: argparse.Namespace) -> int:  # noqa: C901, PLR091
                         metadata[key] = value
                     else:
                         logger.warning("metadata.%s must be a string, ignoring", key)
+
+        # If no metadata from config, try extracting from pyproject.toml
+        if not metadata:
+            metadata = _extract_metadata_from_pyproject(cwd)
+            if metadata:
+                logger.debug("Extracted metadata from pyproject.toml")
+
+        # Apply fallback defaults for missing fields
+        if metadata:
+            metadata.setdefault("license", DEFAULT_LICENSE_FALLBACK)
+            logger.debug(
+                "Prepared metadata for writing to zip: %s",
+                list(metadata.keys()),
+            )
 
         # Extract options
         options: OptionsConfig | None = config.get("options")

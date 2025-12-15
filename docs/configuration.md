@@ -117,7 +117,7 @@ Various bundling options.
 - `respect_gitignore`: If `true`, respect `.gitignore` patterns when selecting files (default: `true`). Can be overridden with CLI flags `--gitignore` or `--no-gitignore`.
 
 #### `metadata` (optional)
-Metadata included in the zip file.
+Metadata included in the zip file's PKG-INFO.
 
 ```jsonc
 {
@@ -131,7 +131,29 @@ Metadata included in the zip file.
 }
 ```
 
-This metadata is stored in the zip but doesn't affect functionality.
+**Metadata Priority Chain:**
+
+Zipbundler uses a cascading priority system for metadata:
+
+1. **Config metadata** - Values from this `metadata` field (highest priority)
+2. **pyproject.toml metadata** - If no config metadata, extracted from `[project]` section
+3. **Defaults** - Fallback values for missing fields:
+   - `license`: "All rights reserved. See additional license files if distributed alongside this file for additional terms."
+
+This means metadata is always written to the zip when available from any source. The license field is guaranteed to be present (using the default fallback if not explicitly provided).
+
+**Example with pyproject.toml auto-detection:**
+
+If you have a `pyproject.toml` like this:
+```toml
+[project]
+name = "my-package"
+version = "1.0.0"
+description = "A great Python package"
+authors = [{name = "Your Name"}]
+```
+
+And no `metadata` field in your zipbundler config, the metadata will be automatically extracted from `pyproject.toml` and written to the zip with the default license fallback.
 
 ## pyproject.toml Integration
 
