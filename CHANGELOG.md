@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.5.0 (2025-12-15)
+
+### Features
+
+- **gitignore**: Implement --gitignore/--no-gitignore option aligned with serger
+  ([`1050132`](https://github.com/apathetic-tools/zipbundler/commit/10501325cd14dd105d9a5ce51aa8c22d31b32674))
+
+
 ## v0.4.0 (2025-12-14)
 
 ### Features
