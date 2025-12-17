@@ -11,8 +11,8 @@ readme = "README.md"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = [
-    "apathetic-logging (>=0.0.1,<2.0.0)",
-    "apathetic-utils (>=0.0.1,<2.0.0)",
+    "apathetic-utils (>=0.2.1,<2.0.0)",
+    "apathetic-logging (>=0.3.2,<2.0.0)",
     "apathetic-schema (>=0.0.1,<2.0.0)",
 ]
 keywords = ["ai", "agent", "workflow"]
@@ -144,7 +144,6 @@ fix = ["sync:ai:guidance", "fix:ruff:package", "fix:format:package"]
 "sync:ai:guidance" = "echo 'currently disabled'"
 # this creates the stitched script from the module, it need to use serger not zipbundler to do that
 "build:stitched" = "python -m serger --quiet"
-# Build zipbundler as a zipapp (for testing zipapp runtime mode)
 "build:zipapp" = "python -m zipbundler -m zipbundler.__main__:main -c -o dist/zipbundler.pyz src --quiet"
 
 # 🚀 Release management (semantic-release)
@@ -212,9 +211,9 @@ dev = [
     "pytest-xdist (>=3.8.0,<4.0.0)",
     "pyright (>=1.1.407,<2.0.0)",
     "python-semantic-release (>=10.0.0,<11.0.0)",
+    "trove-classifiers (>=2025.11.14.15,<2026.0.0.0)",
     "serger (>=0.1.0,<2.0.0)",
-    "sheave (>=0.1.0,<2.0.0)",
-    "trove-classifiers (>=2025.0.0,<2026.0.0)",
+    "sheave (>=0.3.0,<2.0.0)",
 ]
 
 # --- Ruff: formatter and linter ---
@@ -435,6 +434,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 package-mode = true
-packages = [
-  { include = "zipbundler", from = "src" }
-]
+packages = [{ include = "zipbundler", from = "src" }]

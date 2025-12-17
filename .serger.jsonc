@@ -1,5 +1,5 @@
 // Serger's configuration
-// This file defines how to stitch zipbundler itself into a single-file python script
+// This file defines how to stitch the package into a single-file python script
 
 {
   // Stitching configuration for the main python-apathetic-template package

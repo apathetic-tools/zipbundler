@@ -10,18 +10,20 @@ PROJ_ROOT = Path(__file__).resolve().parent.parent.parent.resolve()
 #: Package name used for imports and module paths
 PROGRAM_PACKAGE = "zipbundler"
 
-#: Script name for the single-file distribution
+#: Script name for the stitched distribution
 PROGRAM_SCRIPT = "zipbundler"
 
 #: Config file name (used by patch_everywhere for stitch detection)
 PROGRAM_CONFIG = "zipbundler"
 
-#: Bundler command hint (used for help messages in runtime utilities).
-#: The actual build is performed via `python -m serger` using .serger.jsonc.
-BUNDLER_SCRIPT = "python -m serger"
+#: Path to the bundler script (relative to project root)
+#: Uses the serger CLI installed in the environment, not a local bin script.
+BUNDLER_SCRIPT = "serger"
 
 #: Stitch hints for patch_everywhere (paths that indicate stitched modules)
-PATCH_STITCH_HINTS = {"/dist/", "standalone", f"{PROGRAM_SCRIPT}.py"}
+PATCH_STITCH_HINTS = {"/dist/", "stitched", f"{PROGRAM_SCRIPT}.py"}
+
+DEFAULT_TEST_LOG_LEVEL = "test"
 
 #: Lint test: packages disallowed from `from ... import` statements in tests.
 #: All imports from these packages must use `import <package>.<module> as mod_<module>`
@@ -29,6 +31,6 @@ PATCH_STITCH_HINTS = {"/dist/", "standalone", f"{PROGRAM_SCRIPT}.py"}
 DISALLOWED_PACKAGES = [
     PROGRAM_PACKAGE,
     "apathetic_utils",
-    "apathetic_schema",
     "apathetic_logging",
+    "apathetic_schema",
 ]

@@ -9,10 +9,19 @@ instead of `from <package>.<module> import ...` when importing from our project.
 CRITICAL: This rule applies to ALL imports from our project, including private
 functions (those starting with _). There are NO exceptions (except TYPE_CHECKING).
 
+Disallowed patterns:
+- `from <package>.<module> import ...` - Use
+  `import <package>.<module> as mod_*` instead
+
+Allowed patterns:
+- `import <package> as mod_<package>` (main package)
+- `import <package>.<module> as mod_<module>` (submodule - needed for internal classes)
+
 Why this matters:
-- runtime_swap: Tests can run against either installed package or stitched
+- runtime_swap: Tests can run against either package or stitched
   script. The `import ... as mod_*` pattern ensures the module object
-  is available for runtime swapping.
+  is available for runtime swapping. `from ... import` breaks this
+  because imported items are no longer associated with their module object.
 - patch_everywhere: Predictive patching requires module objects to be available
   at the module level. Using `from ... import` breaks this because the imported
   function is no longer associated with its module object.
@@ -47,6 +56,11 @@ class ImportChecker(ast.NodeVisitor):
             self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        """Check for disallowed `from ... import` statements.
+
+        Disallows: `from <package>.<module> import ...`
+        Allows: `import <package>.<module> as mod_*` (submodule imports are OK)
+        """
         if (
             node.module
             and any(node.module.startswith(pkg) for pkg in DISALLOWED_PACKAGES)
@@ -57,12 +71,20 @@ class ImportChecker(ast.NodeVisitor):
 
 
 def test_no_app_from_imports() -> None:
-    """Enforce `import <mod> as mod_<mod>` pattern for all project imports in tests/.
+    """Enforce `import <mod> as mod_<mod>` pattern (no `from ... import`) for imports.
 
     This is a custom lint rule implemented as a pytest test because we can't
-    create custom ruff rules yet. It ensures all files in tests/ (including
-    conftest.py, tests/utils/, etc.) use the module-level import pattern required
-    for runtime_swap and patch_everywhere to work correctly.
+    create custom ruff rules yet. It ensures all test files use module-level
+    imports required for runtime_swap and patch_everywhere to work correctly.
+
+    Disallows:
+    - `from <package>.<module> import ...` (use
+      `import <package>.<module> as mod_*` instead)
+
+    Allows:
+    - `import <package> as mod_<package>` (main package)
+    - `import <package>.<module> as mod_<module>` (submodule -
+      needed for internal classes)
 
     Exception: Imports inside `if TYPE_CHECKING:` blocks are allowed for type
     annotations only.
@@ -89,10 +111,17 @@ def test_no_app_from_imports() -> None:
         print(f"   Disallowed packages: {packages_str}")
         for path in bad_files:
             print(f"  - {path}")
+        example_pkg = DISALLOWED_PACKAGES[0]
         print(
             "\nAll test files MUST use module-level imports:"
-            f"\n  ❌ from {DISALLOWED_PACKAGES[0]}.module import function"
-            f"\n  ✅ import {DISALLOWED_PACKAGES[0]}.module as mod_module"
+            " (no `from ... import`):"
+            f"\n  ❌ from {example_pkg}.module import function"
+            f"\n  ✅ import {example_pkg} as amod_{example_pkg.split('_')[-1]}"
+            f"\n  ✅ import {example_pkg}.module as mod_module"
+            "\n"
+            "\nThen access via the module object:"
+            f"\n  ✅ amod_{example_pkg.split('_')[-1]}.function()"
+            f"\n  ✅ mod_module.Class.method()"
             "\n"
             "\nThis pattern is required for:"
             "\n  - runtime_swap: Module objects needed for runtime mode switching"
@@ -104,8 +133,9 @@ def test_no_app_from_imports() -> None:
         )
         xmsg = (
             f"{len(bad_files)} test file(s) use disallowed"
-            f" `from {packages_str}.*` imports."
+            f" `from {packages_str}.* import` statements."
             " All test imports from these packages must use"
-            f" `import <package>.<module> as mod_<module>` format."
+            f" `import <package>.<module> as mod_<module>` format"
+            " (no `from ... import`)."
         )
         raise AssertionError(xmsg)

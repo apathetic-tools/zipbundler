@@ -2,7 +2,9 @@
 
 from .constants import (
     BUNDLER_SCRIPT,
+    DEFAULT_TEST_LOG_LEVEL,
     DISALLOWED_PACKAGES,
+    PATCH_STITCH_HINTS,
     PROGRAM_CONFIG,
     PROGRAM_PACKAGE,
     PROGRAM_SCRIPT,
@@ -16,6 +18,8 @@ from .log_fixtures import (
 
 __all__ = [  # noqa: RUF022
     # constants
+    "DEFAULT_TEST_LOG_LEVEL",
+    "PATCH_STITCH_HINTS",
     "BUNDLER_SCRIPT",
     "DISALLOWED_PACKAGES",
     "PROJ_ROOT",

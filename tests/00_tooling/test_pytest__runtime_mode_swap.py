@@ -27,8 +27,7 @@ import apathetic_utils as alib_utils
 import pytest
 
 import zipbundler as app_package
-import zipbundler.meta as mod_meta
-from tests.utils import PROJ_ROOT
+from tests.utils import PROGRAM_PACKAGE, PROGRAM_SCRIPT, PROJ_ROOT
 
 
 # ---------------------------------------------------------------------------
@@ -105,15 +104,15 @@ def test_pytest_runtime_cache_integrity() -> None:  # noqa: PLR0912, PLR0915
     """
     # --- setup ---
     mode = os.getenv("RUNTIME_MODE", "unknown")
-    expected_script = DIST_ROOT / f"{mod_meta.PROGRAM_SCRIPT}.py"
+    expected_script = DIST_ROOT / f"{PROGRAM_SCRIPT}.py"
 
     # In stitched mode, get the module from sys.modules to ensure we're using
     # the version from the stitched script (which was loaded by runtime_swap)
     # rather than the one imported at the top of this file (which might be from
     # the package if it was imported before runtime_swap ran)
-    if mode in ("stitched", "zipapp") and mod_meta.PROGRAM_PACKAGE in sys.modules:
+    if mode in ("stitched", "zipapp") and PROGRAM_PACKAGE in sys.modules:
         # Use the module from sys.modules, which should be from the stitched
-        app_package_actual = sys.modules[mod_meta.PROGRAM_PACKAGE]
+        app_package_actual = sys.modules[PROGRAM_PACKAGE]
         # Check __file__ directly - for stitched modules, should point to
         # dist/<package>.py or dist/<package>.pyz
         package_file_path = getattr(app_package_actual, "__file__", None)
@@ -128,12 +127,12 @@ def test_pytest_runtime_cache_integrity() -> None:  # noqa: PLR0912, PLR0915
         package_file = str(inspect.getsourcefile(app_package_actual) or "")
     # --- execute ---
     safe_trace(f"RUNTIME_MODE={mode}")
-    safe_trace(f"{mod_meta.PROGRAM_PACKAGE}  → {package_file}")
+    safe_trace(f"{PROGRAM_PACKAGE}  → {package_file}")
 
     if os.getenv("TRACE"):
         dump_snapshot()
     # Access via main module to get the function from the namespace class
-    runtime_mode = alib_utils.detect_runtime_mode(package_name=mod_meta.PROGRAM_PACKAGE)
+    runtime_mode = alib_utils.detect_runtime_mode(package_name=PROGRAM_PACKAGE)
 
     if mode == "stitched":
         # --- verify stitched ---
@@ -160,14 +159,13 @@ def test_pytest_runtime_cache_integrity() -> None:  # noqa: PLR0912, PLR0915
             # Module is from package, but that's OK as long as
             # detect_runtime_mode() correctly returns "stitched"
             safe_trace(
-                f"Note: {mod_meta.PROGRAM_PACKAGE} loaded from package "
+                f"Note: {PROGRAM_PACKAGE} loaded from package "
                 f"({package_file}), but runtime_mode correctly detected as 'stitched'"
             )
 
         # troubleshooting info
         safe_trace(
-            f"sys.modules['{mod_meta.PROGRAM_PACKAGE}']"
-            f" = {sys.modules.get(mod_meta.PROGRAM_PACKAGE)}",
+            f"sys.modules['{PROGRAM_PACKAGE}'] = {sys.modules.get(PROGRAM_PACKAGE)}",
         )
 
     else:
@@ -178,7 +176,7 @@ def test_pytest_runtime_cache_integrity() -> None:  # noqa: PLR0912, PLR0915
         # path peeks
         if mode == "zipapp":
             # In zipapp mode, module should be from the zipapp
-            expected_zipapp = DIST_ROOT / f"{mod_meta.PROGRAM_SCRIPT}.pyz"
+            expected_zipapp = DIST_ROOT / f"{PROGRAM_SCRIPT}.pyz"
             assert package_file is not None, (
                 "package_file should not be None in zipapp mode"
             )
@@ -210,7 +208,7 @@ def test_pytest_runtime_cache_integrity() -> None:  # noqa: PLR0912, PLR0915
             assert path.samefile(expected_script), f"{submodule} loaded from {path}"
         elif mode == "zipapp":
             # In zipapp mode, modules should be from the zipapp
-            expected_zipapp = DIST_ROOT / f"{mod_meta.PROGRAM_SCRIPT}.pyz"
+            expected_zipapp = DIST_ROOT / f"{PROGRAM_SCRIPT}.pyz"
             assert str(expected_zipapp) in str(path), (
                 f"{submodule} not from zipapp: {path}"
             )
@@ -236,11 +234,9 @@ def test_debug_dump_all_module_origins() -> None:
     dump_snapshot(include_full=True)
 
     # show total module count for quick glance
-    count = sum(1 for name in sys.modules if name.startswith(mod_meta.PROGRAM_PACKAGE))
-    safe_trace(f"Loaded {count} {mod_meta.PROGRAM_PACKAGE} modules total")
+    count = sum(1 for name in sys.modules if name.startswith(PROGRAM_PACKAGE))
+    safe_trace(f"Loaded {count} {PROGRAM_PACKAGE} modules total")
 
     # force visible failure for debugging runs
-    xmsg = (
-        f"Intentional fail — {count} {mod_meta.PROGRAM_PACKAGE} modules listed above."
-    )
+    xmsg = f"Intentional fail — {count} {PROGRAM_PACKAGE} modules listed above."
     raise AssertionError(xmsg)

@@ -2,9 +2,9 @@
 """Shared test setup for project.
 
 Each pytest run now targets a single runtime mode:
-- Package mode (default): uses src/zipbundler when RUNTIME_MODE=package
-- Stitched mode: uses dist/zipbundler.py when RUNTIME_MODE=stitched
-- Zipapp mode: uses dist/zipbundler.pyz when RUNTIME_MODE=zipapp
+- Package mode (default): uses src/<package> when RUNTIME_MODE=package
+- Stitched mode: uses dist/<package>.py when RUNTIME_MODE=stitched
+- Zipapp mode: uses dist/<package>.pyz when RUNTIME_MODE=zipapp
 
 Switch mode with: RUNTIME_MODE=stitched pytest or RUNTIME_MODE=zipapp pytest
 """
@@ -16,24 +16,36 @@ import apathetic_logging as alib_logging
 import apathetic_utils as alib_utils
 import pytest
 
-import zipbundler.logs as mod_logs
 from tests.utils import (
+    DEFAULT_TEST_LOG_LEVEL,
     PROGRAM_PACKAGE,
     PROGRAM_SCRIPT,
     PROJ_ROOT,
-    direct_logger,
-    module_logger,
 )
 
 
-TEST_TRACE = alib_logging.makeSafeTrace("⚡️")
-
-# early jank hook
+# early jank hook, must happen before importing the <package>
+# so we get the stitched/zipapp version in the right mode
 alib_utils.runtime_swap(
     root=PROJ_ROOT,
     package_name=PROGRAM_PACKAGE,
     script_name=PROGRAM_SCRIPT,
 )
+
+from tests.utils import (  # noqa: E402
+    direct_logger,
+    module_logger,
+)
+
+
+# These fixtures are intentionally re-exported so pytest can discover them.
+__all__ = [
+    "direct_logger",
+    "module_logger",
+]
+
+safe_trace = alib_logging.makeSafeTrace("⚡️")
+
 
 # ----------------------------------------------------------------------
 # Fixtures
@@ -49,12 +61,12 @@ def reset_logger_level() -> Generator[None, None, None]:
     (the default) before each test, preventing test interference.
     """
     # Get the app logger and reset to default level
-    logger = mod_logs.getAppLogger()
+    logger = alib_logging.getLogger()
     # Reset to INFO (default) - this ensures tests start with a known state
-    logger.setLevel("info")
+    logger.setLevel(DEFAULT_TEST_LOG_LEVEL)
     yield
     # After test, reset again to ensure clean state for next test
-    logger.setLevel("info")
+    logger.setLevel(DEFAULT_TEST_LOG_LEVEL)
 
 
 # ----------------------------------------------------------------------
@@ -172,7 +184,7 @@ def pytest_collection_modifyitems(
 def pytest_unconfigure(config: pytest.Config) -> None:
     """Print summary of included runtime-specific tests at the end."""
     included_map: dict[str, int] = getattr(config, "_included_map", {})
-    mode = getattr(config, "_runtime_mode", "installed")
+    mode = getattr(config, "_runtime_mode", "package")
 
     if not included_map:
         return
@@ -189,9 +201,3 @@ def pytest_unconfigure(config: pytest.Config) -> None:
     )
     for path, count in sorted(included_map.items()):
         print(f"   • ({count}) {path}")
-
-
-__all__ = [
-    "direct_logger",
-    "module_logger",
-]

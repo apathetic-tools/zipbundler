@@ -10,7 +10,8 @@ import apathetic_utils as alib_utils
 import pytest
 
 import zipbundler.logs as mod_logs
-import zipbundler.meta as mod_meta
+
+from .constants import PROGRAM_PACKAGE, PROGRAM_SCRIPT
 
 
 SAFE_TRACE = alib_logging.makeSafeTrace(icon="📏")
@@ -54,7 +55,7 @@ def module_logger(
     """
     # Use the same logger name as the original logger so that DualStreamHandler
     # can find it when it looks up the logger by name in emit()
-    original_logger_name = mod_meta.PROGRAM_PACKAGE
+    original_logger_name = PROGRAM_PACKAGE
     new_logger = alib_logging.Logger(original_logger_name, enable_color=False)
     new_logger.setLevel("test")
     # Use setPropagate() instead of direct assignment to set _propagate_explicit flag.
@@ -86,8 +87,8 @@ def module_logger(
         mod_logs,
         "getAppLogger",
         mock_get_app_logger,
-        package_prefix=mod_meta.PROGRAM_PACKAGE,
-        stitch_hints={"/dist/", "stitched", f"{mod_meta.PROGRAM_SCRIPT}.py", ".pyz"},
+        package_prefix=PROGRAM_PACKAGE,
+        stitch_hints={"/dist/", "stitched", f"{PROGRAM_SCRIPT}.py", ".pyz"},
     )
 
     # Also patch _APP_LOGGER directly in both source and stitched modules
